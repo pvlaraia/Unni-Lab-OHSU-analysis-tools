@@ -1,6 +1,7 @@
 import os
 from ohsu.file_manager.directory import IJDirectory
 from ohsu.image.image import Image
+from ij import IJ
 from ij.gui import GenericDialog
 
 SliceNumber = 0
@@ -27,8 +28,15 @@ def run():
 ImagePlus img - ImagePlus img that we're gonna process
 '''
 def processImage(imgpath):
-    img = Image.fromCZI(imgpath)
-    img.getThreshold('DAPI')
-    img.close()
+    main = Image.fromCZI(imgpath)
+    main.getThreshold('DAPI')
+    syn1 = main.createStackedImage('Syn1', 1)
+    gh2ax = main.createStackedImage('gH2AX', 2)
+    dapi = main.createStackedImage('DAPI', 3)
+    main.close()
+
+    syn1.close()
+    gh2ax.close()
+    dapi.close()
 
 run()
