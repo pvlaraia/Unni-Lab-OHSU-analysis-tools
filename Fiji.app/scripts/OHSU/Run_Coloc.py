@@ -4,6 +4,7 @@ from ohsu.image.image import Image
 from ij import IJ
 from ij.gui import GenericDialog
 from ij.plugin.frame import RoiManager
+from time import sleep
 
 def run():
     gd = GenericDialog('Instructions')
@@ -53,6 +54,14 @@ class ImageProcessor:
         IJ.saveAsTiff(drawing, '{}/{}'.format(self.outDir.path, tif_name))
         drawing.close()
 
+        dapi.select()
+        self.getRoiManager().runCommand(dapi.img, 'multi-measure')
+        IJ.log(self.outDir.path)
+        IJ.log(self.filenameNoExtension)
+        IJ.saveAs('Results', '{}/{}_nuclei_mask_properties.csv'.format(self.outDir.path, self.filenameNoExtension))
+
+        self.getRoiManager().runCommand('Save', '{}/{}_RoiSet.zip'.format(self.outDir.path, self.filenameNoExtension))
+
 
         # close everything
         self.disposeRoiManager()
@@ -62,6 +71,7 @@ class ImageProcessor:
     
     def getRoiManager(self):
         if self.roiManager is None:
+            IJ.log('new roimanager')
             self.roiManager = RoiManager()
         return self.roiManager
     
