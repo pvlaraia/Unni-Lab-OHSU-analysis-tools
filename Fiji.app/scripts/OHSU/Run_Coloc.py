@@ -54,11 +54,7 @@ class ImageProcessor:
         IJ.saveAsTiff(drawing, '{}/{}'.format(self.outDir.path, tif_name))
         drawing.close()
 
-        dapi.select()
         self.saveDapiMultiMeasure(dapi)
-        IJ.log(self.outDir.path)
-        IJ.log(self.filenameNoExtension)
-        IJ.saveAs('Results', '{}/{}_nuclei_mask_properties.csv'.format(self.outDir.path, self.filenameNoExtension))
 
         self.getRoiManager().runCommand('Save', '{}/{}_RoiSet.zip'.format(self.outDir.path, self.filenameNoExtension))
 
@@ -71,6 +67,7 @@ class ImageProcessor:
 
 
     def saveDapiMultiMeasure(self, dapi):
+        dapi.select()
         nRoi = self.getRoiManager().getCount()
         for i in range(0, nRoi):
             self.getRoiManager().select(i)
