@@ -1,7 +1,7 @@
 import os
 from ohsu.file_manager.directory import IJDirectory
 from ohsu.image.image import Image
-from ij import IJ
+from ij import IJ, WindowManager
 from ij.gui import GenericDialog
 from ij.plugin.frame import RoiManager
 from time import sleep
@@ -55,7 +55,7 @@ class ImageProcessor:
         drawing.close()
 
         dapi.select()
-        self.getRoiManager().runCommand(dapi.img, 'multi-measure')
+        self.saveDapiMultiMeasure(dapi)
         IJ.log(self.outDir.path)
         IJ.log(self.filenameNoExtension)
         IJ.saveAs('Results', '{}/{}_nuclei_mask_properties.csv'.format(self.outDir.path, self.filenameNoExtension))
@@ -68,6 +68,16 @@ class ImageProcessor:
         syn1.close()
         gh2ax.close()
         dapi.close() 
+
+
+    def saveDapiMultiMeasure(self, dapi):
+        nRoi = self.getRoiManager().getCount()
+        for i in range(0, nRoi):
+            self.getRoiManager().select(i)
+            self.getRoiManager().runCommand('Measure')
+        IJ.saveAs('Results', '{}/{}_nuclei_mask_properties.csv'.format(self.outDir.path, self.filenameNoExtension))
+        self.closeResults()
+        
     
     def getRoiManager(self):
         if self.roiManager is None:
@@ -80,5 +90,9 @@ class ImageProcessor:
             self.roiManager.reset()
             self.roiManager.close()
             self.roiManager = None
+    
+    def closeResults(self):
+        results = WindowManager.getWindow('Results')
+        results.close()
 
 run()
