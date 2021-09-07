@@ -31,6 +31,12 @@ class Image:
         self.img.close()
 
     '''
+    Select/focus this image
+    '''
+    def select(self):
+        IJ.selectWindow(self.img.getTitle())
+
+    '''
     Ask the user to determine a threshold to use for this image
 
     string label - The type of threshold being retrieved, eg DAPI
@@ -63,7 +69,7 @@ class Image:
     def createStackedImage(self, name, channel):
         IJ.newImage(name, '16-bit black', 1908, 1908, 1)
         copy = Image(WindowManager.getImage(name))
-        IJ.selectWindow(self.img.getTitle())
+        self.select()
         initialSlice = self.img.getSlice()
         initialChannel = self.img.getC()
         self.img.setSlice(0)

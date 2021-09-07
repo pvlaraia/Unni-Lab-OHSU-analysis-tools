@@ -3,10 +3,7 @@ from ohsu.file_manager.directory import IJDirectory
 from ohsu.image.image import Image
 from ij import IJ
 from ij.gui import GenericDialog
-
-SliceNumber = 0
-Syn1Threshold = 2580
-PARThreshold = 1800
+from ij.plugin.frame import RoiManager
 
 def run():
     gd = GenericDialog('Instructions')
@@ -18,25 +15,60 @@ def run():
         return 0
 
     inDir = IJDirectory('Input')
+    outDir = IJDirectory('Output')
 
     for root, _dirs, files in os.walk(inDir.path):
         for filename in files:
             imgpath = os.path.join(root, filename)
-            processImage(imgpath)
+            processor = ImageProcessor(imgpath, outDir)
+            processor.run()
 
-'''
-ImagePlus img - ImagePlus img that we're gonna process
-'''
-def processImage(imgpath):
-    main = Image.fromCZI(imgpath)
-    main.getThreshold('DAPI')
-    syn1 = main.createStackedImage('Syn1', 1)
-    gh2ax = main.createStackedImage('gH2AX', 2)
-    dapi = main.createStackedImage('DAPI', 3)
-    main.close()
 
-    syn1.close()
-    gh2ax.close()
-    dapi.close()
+class ImageProcessor:
+    def __init__(self, imgpath, outDir):
+        self.outDir = outDir
+        self.roiManager = None
+        self.filename = os.path.basename(imgpath)
+        self.filenameNoExtension = os.path.splitext(self.filename)[0]
+        self.img = Image.fromCZI(imgpath)
+    
+    def run(self):
+        dapi_threshold = self.img.getThreshold('DAPI')
+
+        # routine to select and create single images of the Syn1, gH2AX and DAPI channels and then close the parent z-stack
+        syn1 = self.img.createStackedImage('Syn1', 1)
+        gh2ax = self.img.createStackedImage('gH2AX', 2)
+        dapi = self.img.createStackedImage('DAPI', 3)
+        self.img.close()
+
+        # routine to create ROIs for each nucleus using a set threshold, saves a nuclear mask image and then closes it, saves nuclei properties and the nuclear ROIs
+        # save DAPI TIFF
+        dapi.select()
+        IJ.setThreshold(dapi_threshold, 65535)
+
+        self.getRoiManager().runCommand('Show All with labels')
+        IJ.run("Analyze Particles...", "size=500-Infinity show=Outlines add slice")
+        drawing = IJ.getImage()
+        tif_name = 'Drawing of {}.tif'.format(self.filenameNoExtension)
+        IJ.saveAsTiff(drawing, '{}/{}'.format(self.outDir.path, tif_name))
+        drawing.close()
+
+
+        # close everything
+        self.disposeRoiManager()
+        syn1.close()
+        gh2ax.close()
+        dapi.close() 
+    
+    def getRoiManager(self):
+        if self.roiManager is None:
+            self.roiManager = RoiManager()
+        return self.roiManager
+    
+    def disposeRoiManager(self):
+        if (self.roiManager is not None):
+            self.roiManager.reset()
+            self.roiManager.close()
+            self.roiManager = None
 
 run()
