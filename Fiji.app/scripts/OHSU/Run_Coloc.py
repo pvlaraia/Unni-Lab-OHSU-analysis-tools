@@ -54,10 +54,10 @@ class ImageProcessor:
         IJ.saveAsTiff(drawing, '{}/{}'.format(self.outDir.path, tif_name))
         drawing.close()
 
-        self.saveDapiMultiMeasure(dapi)
-
+        self.measureRoiAndSave(dapi, 'nuclei_mask_properties.csv')
         self.getRoiManager().runCommand('Save', '{}/{}_RoiSet.zip'.format(self.outDir.path, self.filenameNoExtension))
-
+        self.measureRoiAndSave(syn1, 'syn1_cell.csv')
+        self.measureRoiAndSave(gh2ax, 'gh2ax_cell.csv')
 
         # close everything
         self.disposeRoiManager()
@@ -65,20 +65,17 @@ class ImageProcessor:
         gh2ax.close()
         dapi.close() 
 
-
-    def saveDapiMultiMeasure(self, dapi):
-        dapi.select()
-        nRoi = self.getRoiManager().getCount()
-        for i in range(0, nRoi):
-            self.getRoiManager().select(i)
-            self.getRoiManager().runCommand('Measure')
-        IJ.saveAs('Results', '{}/{}_nuclei_mask_properties.csv'.format(self.outDir.path, self.filenameNoExtension))
+    def measureRoiAndSave(self, img, file_suffix):
+        roiM = self.getRoiManager()
+        roiM.deselect()
+        img.select()
+        roiM.runCommand('Measure')
+        IJ.saveAs('Results', '{}/{}_{}'.format(self.outDir.path, self.filenameNoExtension, file_suffix))
         self.closeResults()
         
     
     def getRoiManager(self):
         if self.roiManager is None:
-            IJ.log('new roimanager')
             self.roiManager = RoiManager()
         return self.roiManager
     
