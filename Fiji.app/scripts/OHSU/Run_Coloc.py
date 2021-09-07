@@ -18,29 +18,32 @@ def run():
     inDir = IJDirectory('Input')
     outDir = IJDirectory('Output')
 
-    for root, _dirs, files in os.walk(inDir.path):
-        for filename in files:
-            imgpath = os.path.join(root, filename)
-            processor = ImageProcessor(imgpath, outDir)
-            processor.run()
+    ImageProcessor(inDir, outDir).run()
 
 
 class ImageProcessor:
-    def __init__(self, imgpath, outDir):
-        self.outDir = outDir
+    def __init__(self, inputDir, outputDir):
+        self.inputDir = inputDir
+        self.outputDir = outputDir
         self.roiManager = None
-        self.filename = os.path.basename(imgpath)
-        self.filenameNoExtension = os.path.splitext(self.filename)[0]
-        self.img = Image.fromCZI(imgpath)
-    
-    def run(self):
-        dapi_threshold = self.img.getThreshold('DAPI')
 
+    def run(self):
+        for root, _dirs, files in os.walk(self.inputDir.path):
+            for filename in files:
+                imgpath = os.path.join(root, filename)
+                self.processImage(imgpath)
+
+    def processImage(self, imgpath):
+        img = Image.fromCZI(imgpath)
+        filename = os.path.basename(imgpath)
+        imgName = os.path.splitext(filename)[0]
+
+        dapi_threshold = img.getThreshold('DAPI')
         # routine to select and create single images of the Syn1, gH2AX and DAPI channels and then close the parent z-stack
-        syn1 = self.img.createStackedImage('Syn1', 1)
-        gh2ax = self.img.createStackedImage('gH2AX', 2)
-        dapi = self.img.createStackedImage('DAPI', 3)
-        self.img.close()
+        syn1 = img.createStackedImage('Syn1', 1)
+        gh2ax = img.createStackedImage('gH2AX', 2)
+        dapi = img.createStackedImage('DAPI', 3)
+        img.close()
 
         # routine to create ROIs for each nucleus using a set threshold, saves a nuclear mask image and then closes it, saves nuclei properties and the nuclear ROIs
         # save DAPI TIFF
@@ -50,14 +53,14 @@ class ImageProcessor:
         self.getRoiManager().runCommand('Show All with labels')
         IJ.run("Analyze Particles...", "size=500-Infinity show=Outlines add slice")
         drawing = IJ.getImage()
-        tif_name = 'Drawing of {}.tif'.format(self.filenameNoExtension)
-        IJ.saveAsTiff(drawing, '{}/{}'.format(self.outDir.path, tif_name))
+        tif_name = 'Drawing of {}.tif'.format(imgName)
+        IJ.saveAsTiff(drawing, '{}/{}'.format(self.outputDir.path, tif_name))
         drawing.close()
 
-        self.measureRoiAndSave(dapi, 'nuclei_mask_properties.csv')
-        self.getRoiManager().runCommand('Save', '{}/{}_RoiSet.zip'.format(self.outDir.path, self.filenameNoExtension))
-        self.measureRoiAndSave(syn1, 'syn1_cell.csv')
-        self.measureRoiAndSave(gh2ax, 'gh2ax_cell.csv')
+        self.measureRoiAndSave(dapi, imgName, 'nuclei_mask_properties.csv')
+        self.getRoiManager().runCommand('Save', '{}/{}_RoiSet.zip'.format(self.outputDir.path, imgName))
+        self.measureRoiAndSave(syn1, imgName, 'syn1_cell.csv')
+        self.measureRoiAndSave(gh2ax, imgName, 'gh2ax_cell.csv')
 
         # close everything
         self.disposeRoiManager()
@@ -65,15 +68,6 @@ class ImageProcessor:
         gh2ax.close()
         dapi.close() 
 
-    def measureRoiAndSave(self, img, file_suffix):
-        roiM = self.getRoiManager()
-        roiM.deselect()
-        img.select()
-        roiM.runCommand('Measure')
-        IJ.saveAs('Results', '{}/{}_{}'.format(self.outDir.path, self.filenameNoExtension, file_suffix))
-        self.closeResults()
-        
-    
     def getRoiManager(self):
         if self.roiManager is None:
             self.roiManager = RoiManager()
@@ -84,7 +78,15 @@ class ImageProcessor:
             self.roiManager.reset()
             self.roiManager.close()
             self.roiManager = None
-    
+
+    def measureRoiAndSave(self, img, imgName, file_suffix):
+        roiM = self.getRoiManager()
+        roiM.deselect()
+        img.select()
+        roiM.runCommand('Measure')
+        IJ.saveAs('Results', '{}/{}_{}'.format(self.outputDir.path, imgName, file_suffix))
+        self.closeResults()
+
     def closeResults(self):
         results = WindowManager.getWindow('Results')
         results.close()
