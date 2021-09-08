@@ -1,7 +1,10 @@
-from ij import IJ, WindowManager
+from ij import WindowManager
 from ij.measure import ResultsTable
 
 class Results:
+
+    def __init__(self, table = None):
+        self.table = table
 
     def close(self):
         results = WindowManager.getWindow('Results')
@@ -21,11 +24,13 @@ class Results:
             else:
                 row = row.split(",")
             data.append(row)
-        return (list(rt.getHeadings()), data)
+        return (['ROI'] + list(rt.getHeadings()), data)
 
     def save(self, path):
         rt = self.getResults()
         rt.saveAs(path)
 
     def getResults(self):
-        return ResultsTable.getResultsTable()
+        if self.table is None:
+            return ResultsTable.getResultsTable()
+        return self.table

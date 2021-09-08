@@ -1,3 +1,4 @@
+import codecs
 import csv
 import os
 from ohsu.file_manager.directory import IJDirectory
@@ -5,7 +6,6 @@ from ohsu.image.image import Image
 from ohsu.results.results import Results
 from ij import IJ, WindowManager
 from ij.gui import GenericDialog
-from ij.measure import ResultsTable
 from ij.plugin.frame import RoiManager
 
 HEADER_KEY = '__HEADER__'
@@ -33,6 +33,7 @@ class ImageProcessor:
         self.dapiNuclei = {}
         self.syn1Cells = {}
         self.gh2axCells = {}
+        self.colocalisation = {}
 
     def run(self):
         for root, _dirs, files in os.walk(self.inputDir.path):
@@ -46,16 +47,19 @@ class ImageProcessor:
         self.saveCollection(self.dapiNuclei, 'nuclei_mask_properties.csv')
         self.saveCollection(self.syn1Cells, 'syn1_cells.csv')
         self.saveCollection(self.gh2axCells, 'gh2ax_cells.csv')
+        self.saveCollection(self.colocalisation, 'colocalisation.csv')
 
     def saveCollection(self, collection, name):
         with open('{}/{}'.format(self.outputDir.path, name), 'wb') as csvfile:
+            csvfile.write(codecs.BOM_UTF8)
             writer = csv.writer(csvfile)
-            writer.writerow(['', 'ROI'] + collection[HEADER_KEY])
+            headers = [header.encode('utf-8') for header in collection[HEADER_KEY]]
+            writer.writerow([''] + headers)
             for imgName, measurements in sorted(collection.items()):
                 if (imgName == HEADER_KEY):
                     continue
                 writer.writerow([imgName])
-                writer.writerows(map(lambda m: [''] + m, measurements))
+                writer.writerows(map(lambda measurement_row: [''] + [entry.encode('utf-8') for entry in measurement_row], measurements))
         
 
     def processImage(self, imgpath):
@@ -98,11 +102,36 @@ class ImageProcessor:
         self.gh2axCells[HEADER_KEY] = headings
         self.gh2axCells[imgName] = gh2ax_measurements
 
+        # Colocalisation
+        headings, coloc_measurements = self.getColocalisationForImg(syn1)
+        self.colocalisation[HEADER_KEY] = headings
+        self.colocalisation[imgName] = coloc_measurements
+
         # close everything
         self.disposeRoiManager()
         syn1.close()
         gh2ax.close()
-        dapi.close() 
+        dapi.close()
+        Results().close()
+
+
+    def getColocalisationForImg(self, img):
+        roiM = self.getRoiManager()
+        headers = None
+        collection = []
+        for i in range(0, roiM.getCount()):
+            img.select()
+            roiM.select(i)
+            IJ.run('Colocalization Test', 'channel_1=Syn1 channel_2=gH2AX roi=[ROI in channel 1 ] randomization=[Fay (x,y,z translation)] current_slice')
+            resultsTextWindow = WindowManager.getWindow('Results')
+            textPanel = resultsTextWindow.getTextPanel()
+            headings = textPanel.getOrCreateResultsTable().getColumnHeadings().split("\t")
+            data = textPanel.getLine(0).split("\t")
+            headers = headings if headers is None else headers
+            collection.append(data)
+
+        return (headers, collection)
+
 
     def getRoiManager(self):
         if self.roiManager is None:
