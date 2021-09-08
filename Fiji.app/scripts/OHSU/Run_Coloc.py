@@ -1,10 +1,14 @@
+import csv
 import os
 from ohsu.file_manager.directory import IJDirectory
 from ohsu.image.image import Image
+from ohsu.results.results import Results
 from ij import IJ, WindowManager
 from ij.gui import GenericDialog
+from ij.measure import ResultsTable
 from ij.plugin.frame import RoiManager
-from time import sleep
+
+HEADER_KEY = '__HEADER__'
 
 def run():
     gd = GenericDialog('Instructions')
@@ -26,12 +30,33 @@ class ImageProcessor:
         self.inputDir = inputDir
         self.outputDir = outputDir
         self.roiManager = None
+        self.dapiNuclei = {}
+        self.syn1Cells = {}
+        self.gh2axCells = {}
 
     def run(self):
         for root, _dirs, files in os.walk(self.inputDir.path):
             for filename in files:
                 imgpath = os.path.join(root, filename)
                 self.processImage(imgpath)
+        self.postProcessData()
+
+        
+    def postProcessData(self):
+        self.saveCollection(self.dapiNuclei, 'nuclei_mask_properties.csv')
+        self.saveCollection(self.syn1Cells, 'syn1_cells.csv')
+        self.saveCollection(self.gh2axCells, 'gh2ax_cells.csv')
+
+    def saveCollection(self, collection, name):
+        with open('{}/{}'.format(self.outputDir.path, name), 'wb') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['', 'ROI'] + collection[HEADER_KEY])
+            for imgName, measurements in sorted(collection.items()):
+                if (imgName == HEADER_KEY):
+                    continue
+                writer.writerow([imgName])
+                writer.writerows(map(lambda m: [''] + m, measurements))
+        
 
     def processImage(self, imgpath):
         img = Image.fromCZI(imgpath)
@@ -57,10 +82,21 @@ class ImageProcessor:
         IJ.saveAsTiff(drawing, '{}/{}'.format(self.outputDir.path, tif_name))
         drawing.close()
 
-        self.measureRoiAndSave(dapi, imgName, 'nuclei_mask_properties.csv')
+        # DAPI
+        headings, dapi_measurements = self.getRoiMeasurements(dapi)
+        self.dapiNuclei[HEADER_KEY] = headings
+        self.dapiNuclei[imgName] = dapi_measurements
         self.getRoiManager().runCommand('Save', '{}/{}_RoiSet.zip'.format(self.outputDir.path, imgName))
-        self.measureRoiAndSave(syn1, imgName, 'syn1_cell.csv')
-        self.measureRoiAndSave(gh2ax, imgName, 'gh2ax_cell.csv')
+
+        # SYN1
+        headings, syn1_measurements = self.getRoiMeasurements(syn1)
+        self.syn1Cells[HEADER_KEY] = headings
+        self.syn1Cells[imgName] = syn1_measurements
+
+        # GH2AX
+        headings, gh2ax_measurements = self.getRoiMeasurements(gh2ax)
+        self.gh2axCells[HEADER_KEY] = headings
+        self.gh2axCells[imgName] = gh2ax_measurements
 
         # close everything
         self.disposeRoiManager()
@@ -79,16 +115,14 @@ class ImageProcessor:
             self.roiManager.close()
             self.roiManager = None
 
-    def measureRoiAndSave(self, img, imgName, file_suffix):
+    def getRoiMeasurements(self, img):
         roiM = self.getRoiManager()
         roiM.deselect()
         img.select()
         roiM.runCommand('Measure')
-        IJ.saveAs('Results', '{}/{}_{}'.format(self.outputDir.path, imgName, file_suffix))
-        self.closeResults()
-
-    def closeResults(self):
-        results = WindowManager.getWindow('Results')
+        results = Results()
+        data = results.getResultsArray()
         results.close()
+        return data
 
 run()
