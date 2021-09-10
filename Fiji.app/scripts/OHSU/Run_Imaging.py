@@ -35,6 +35,11 @@ class ImageProcessor:
         self.gh2axCells = {}
         self.colocalisation = {}
 
+    '''
+    Main entrypoint, run the program. walk all the images in inputDir and process in sequence
+
+    return void
+    '''
     def run(self):
         for root, _dirs, files in os.walk(self.inputDir.path):
             for filename in files:
@@ -42,13 +47,31 @@ class ImageProcessor:
                 self.processImage(imgpath)
         self.postProcessData()
 
-        
+    '''
+    Over the course of running each image, we've aggregated the data in ImageProcessor, and after processing
+    all images we want to save the aggregated data into individual csv files
+    
+    return void
+    ''' 
     def postProcessData(self):
         self.saveCollection(self.dapiNuclei, 'nuclei_mask_properties.csv')
         self.saveCollection(self.syn1Cells, 'syn1_cells.csv')
         self.saveCollection(self.gh2axCells, 'gh2ax_cells.csv')
         self.saveCollection(self.colocalisation, 'colocalisation.csv')
 
+    '''
+    Save a collection to a file
+    
+    @collection dict -  of type 
+    {
+        '__HEADER__' => ['header', 'columns'],
+        'imgFileName' => [[measurements, for, roi1], [measurements, for, roi2], [measurements, for, roi3]]
+    }
+
+    @name str - name of the file
+
+    return void
+    '''
     def saveCollection(self, collection, name):
         with open('{}/{}'.format(self.outputDir.path, name), 'wb') as csvfile:
             csvfile.write(codecs.BOM_UTF8)
@@ -62,6 +85,13 @@ class ImageProcessor:
                 writer.writerows(map(lambda measurement_row: [''] + [entry.encode('utf-8') for entry in measurement_row], measurements))
         
 
+    '''
+    Process a single image by running the various ROI analyses/measurements
+
+    @imgpath str - file path to the image being processed
+
+    return void
+    '''
     def processImage(self, imgpath):
         img = Image.fromCZI(imgpath)
         filename = os.path.basename(imgpath)
@@ -115,6 +145,13 @@ class ImageProcessor:
         Results().close()
 
 
+    '''
+    Given an image, run Colocalisation Test plugin
+
+    @img Image - the image to run Coloc on
+
+    return tuple([headers], [[roi measurements]])
+    '''
     def getColocalisationForImg(self, img):
         roiM = self.getRoiManager()
         headers = None
@@ -133,17 +170,35 @@ class ImageProcessor:
         return (headers, collection)
 
 
+    '''
+    Get a reference to our roiManager, create if non exists
+
+    return RoiManager
+    '''
     def getRoiManager(self):
         if self.roiManager is None:
             self.roiManager = RoiManager()
         return self.roiManager
     
+    '''
+    Get rid of our RoiManager
+
+    return void
+    '''
     def disposeRoiManager(self):
         if (self.roiManager is not None):
             self.roiManager.reset()
             self.roiManager.close()
             self.roiManager = None
 
+
+    '''
+    Given an image, get ROI measurements
+
+    @img Image - the image to run Coloc on
+
+    return tuple([headers], [[roi measurements]])
+    '''
     def getRoiMeasurements(self, img):
         roiM = self.getRoiManager()
         roiM.deselect()

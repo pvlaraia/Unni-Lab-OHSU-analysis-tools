@@ -12,6 +12,11 @@ class Results:
             return
         results.close(False)
 
+    '''
+    Get the headers & rows from this ResultsTable
+
+    return tuple([headers], [[roi measurements]])
+    '''
     def getResultsArray(self):
         rt = self.getResults()
         if (rt is None):
