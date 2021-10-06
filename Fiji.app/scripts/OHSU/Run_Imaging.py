@@ -1,6 +1,8 @@
 import codecs
 import csv
+import json
 import os
+from ohsu.config.config import Config
 from ohsu.file_manager.directory import IJDirectory
 from ohsu.image.image import Image
 from ohsu.results.results import Results
@@ -11,10 +13,20 @@ from ij.plugin.frame import RoiManager
 HEADER_KEY = '__HEADER__'
 
 def run():
+
+    config = Config.getConfig()
+    channel1 = config["channels"]["1"]
+    channel2 = config["channels"]["2"]
+    channel3 = config["channels"]["3"]
+
     gd = GenericDialog('Instructions')
     gd.addMessage('1. When prompted, choose the input folder (Where are the files we want to analyze?)')
     gd.addMessage('2. When prompted, choose the output folder (Where should we put the results?)')
-    gd.addMessage('3. Start processing images from the input folder. For each image, you will be asked to select a DAPI Threshold.')
+    gd.addMessage('3. Start processing images from the input folder. For each image, you will be asked to select a Threshold.')
+    gd.addMessage('Channels:')
+    gd.addMessage('Channel 1 - ' + channel1)
+    gd.addMessage('Channel 2 - ' + channel2)
+    gd.addMessage('Channel 3 - ' + channel3)
     gd.showDialog()
     if (gd.wasCanceled()):
         return 0
@@ -30,9 +42,9 @@ class ImageProcessor:
         self.inputDir = inputDir
         self.outputDir = outputDir
         self.roiManager = None
-        self.dapiNuclei = {}
-        self.syn1Cells = {}
-        self.gh2axCells = {}
+        self.channel1Cells = {}
+        self.channel2Cells = {}
+        self.channel3Cells = {}
         self.colocalisation = {}
 
     '''
@@ -54,9 +66,10 @@ class ImageProcessor:
     return void
     ''' 
     def postProcessData(self):
-        self.saveCollection(self.dapiNuclei, 'nuclei_mask_properties.csv')
-        self.saveCollection(self.syn1Cells, 'syn1_cells.csv')
-        self.saveCollection(self.gh2axCells, 'gh2ax_cells.csv')
+        channels = Config.getConfig()["channels"]
+        self.saveCollection(self.channel1Cells, '{}_cells.csv'.format(channels["1"]))
+        self.saveCollection(self.channel2Cells, '{}_cells.csv'.format(channels["2"]))
+        self.saveCollection(self.channel3Cells, '{}_cells.csv'.format(channels["3"]))
         self.saveCollection(self.colocalisation, 'colocalisation.csv')
 
     '''
@@ -118,19 +131,19 @@ class ImageProcessor:
 
         # DAPI
         headings, dapi_measurements = self.getRoiMeasurements(dapi)
-        self.dapiNuclei[HEADER_KEY] = headings
-        self.dapiNuclei[imgName] = dapi_measurements
+        self.channel3Cells[HEADER_KEY] = headings
+        self.channel3Cells[imgName] = dapi_measurements
         self.getRoiManager().runCommand('Save', '{}/{}_RoiSet.zip'.format(self.outputDir.path, imgName))
 
         # SYN1
         headings, syn1_measurements = self.getRoiMeasurements(syn1)
-        self.syn1Cells[HEADER_KEY] = headings
-        self.syn1Cells[imgName] = syn1_measurements
+        self.channel1Cells[HEADER_KEY] = headings
+        self.channel1Cells[imgName] = syn1_measurements
 
         # GH2AX
         headings, gh2ax_measurements = self.getRoiMeasurements(gh2ax)
-        self.gh2axCells[HEADER_KEY] = headings
-        self.gh2axCells[imgName] = gh2ax_measurements
+        self.channel2Cells[HEADER_KEY] = headings
+        self.channel2Cells[imgName] = gh2ax_measurements
 
         # Colocalisation
         headings, coloc_measurements = self.getColocalisationForImg(syn1)
