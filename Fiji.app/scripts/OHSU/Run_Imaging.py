@@ -14,6 +14,7 @@ HEADER_KEY = '__HEADER__'
 
 def run():
 
+    validateConfig()
     config = Config.getConfig()
 
     gd = GenericDialog('Instructions')
@@ -21,9 +22,8 @@ def run():
     gd.addMessage('2. When prompted, choose the output folder (Where should we put the results?)')
     gd.addMessage('3. Start processing images from the input folder. For each image, you will be asked to select a Threshold.')
     gd.addMessage('Channels:')
-    gd.addMessage('Channel 1 - ' + config["channels"]["1"])
-    gd.addMessage('Channel 2 - ' + config["channels"]["2"])
-    gd.addMessage('Channel 3 - ' + config["channels"]["3"])
+    for channel, label in config['channels'].items():
+        gd.addMessage('{} - {}'.format(channel, label))
     gd.showDialog()
     if (gd.wasCanceled()):
         return 0
@@ -32,6 +32,25 @@ def run():
     outDir = IJDirectory('Output')
 
     ImageProcessor(inDir, outDir).run()
+    Config.close()
+
+def validateConfig():
+    config = Config.getConfig()
+    channels = config['channels']
+    mainChannel = config['mainChannel']
+    colocChannel = config['colocChannel'] if config.has_key('colocChannel') else None
+
+    if channels is None:
+        raise Exception('"channels" must be defined in config.json')
+    
+    if mainChannel is None:
+        raise Exception('"mainChannel" must be defined in config.json')
+
+    if mainChannel not in channels.keys():
+        raise Exception('mainChannel "{}" does not exist in "channels" in config.json'.format(mainChannel))
+
+    if colocChannel is not None and colocChannel not in channels.keys():
+        raise Exception('colocChannel "{}" does not exist in "channels" in config.json'.format(colocChannel))
 
 
 class ImageProcessor:
@@ -39,9 +58,10 @@ class ImageProcessor:
         self.inputDir = inputDir
         self.outputDir = outputDir
         self.roiManager = None
-        self.channel1Cells = {}
-        self.channel2Cells = {}
-        self.channel3Cells = {}
+        self.dataCollection = {}
+        channels = Config.getConfig()['channels']
+        for channel in channels.keys():
+            self.dataCollection[channel] = {}
         self.colocalisation = {}
 
     '''
@@ -63,11 +83,13 @@ class ImageProcessor:
     return void
     ''' 
     def postProcessData(self):
-        channels = Config.getConfig()["channels"]
-        self.saveCollection(self.channel1Cells, '{}_cells.csv'.format(channels["1"]))
-        self.saveCollection(self.channel2Cells, '{}_cells.csv'.format(channels["2"]))
-        self.saveCollection(self.channel3Cells, '{}_cells.csv'.format(channels["3"]))
-        self.saveCollection(self.colocalisation, 'colocalisation.csv')
+        config = Config.getConfig()
+        channels = config["channels"]
+        for channel, cellData in self.dataCollection.items():
+            self.saveCollection(cellData, '{}_cells.csv'.format(channels[channel]))
+        
+        if config.has_key('colocChannel'):
+            self.saveCollection(self.colocalisation, 'colocalisation.csv')
 
     '''
     Save a collection to a file
@@ -108,20 +130,16 @@ class ImageProcessor:
         imgName = os.path.splitext(filename)[0]
 
         config = Config.getConfig()
-        threshold = img.getThreshold(config["channels"][config["mainChannel"]])
+        channels = config['channels']
+        threshold = img.getThreshold(channels[config["mainChannel"]])
         # routine to select and create single images of the channels and then close the parent z-stack
-        channel_1_img = img.createStackedImage(config["channels"]["1"], 1)
-        channel_2_img = img.createStackedImage(config["channels"]["2"], 2)
-        channel_3_img = img.createStackedImage(config["channels"]["3"], 3)
-        images = {
-            "1": channel_1_img,
-            "2": channel_2_img,
-            "3": channel_3_img,
-        }
+        images = {}
+        for channel, label in channels.items():
+            images[channel] = img.createStackedImage(label, int(channel))
         img.close()
 
         # routine to create ROIs for each nucleus using a set threshold, saves a nuclear mask image and then closes it, saves nuclei properties and the nuclear ROIs
-        # save DAPI TIFF
+        # save TIFF
         images[config["mainChannel"]].select()
         IJ.setThreshold(threshold, 65535)
 
@@ -134,23 +152,13 @@ class ImageProcessor:
 
         self.getRoiManager().runCommand('Save', '{}/{}_RoiSet.zip'.format(self.outputDir.path, imgName))
 
-        # Channel1
-        headings, c1_measurements = self.getRoiMeasurements(channel_1_img)
-        self.channel1Cells[HEADER_KEY] = headings
-        self.channel1Cells[imgName] = c1_measurements
-
-        # Channel2
-        headings, c2_measurements = self.getRoiMeasurements(channel_2_img)
-        self.channel2Cells[HEADER_KEY] = headings
-        self.channel2Cells[imgName] = c2_measurements
-
-        # Channel3
-        headings, c3_measurements = self.getRoiMeasurements(channel_3_img)
-        self.channel3Cells[HEADER_KEY] = headings
-        self.channel3Cells[imgName] = c3_measurements
+        for channel, channel_img in images.items():
+            headings, measurements = self.getRoiMeasurements(channel_img)
+            self.dataCollection[channel][HEADER_KEY] = headings
+            self.dataCollection[channel][imgName] = measurements
 
         # Colocalisation
-        coloc_channel = config["colocChannel"]
+        coloc_channel = config["colocChannel"] if config.has_key('colocChannel') else None
         if (coloc_channel is not None and config["channels"].has_key(coloc_channel)):
             headings, coloc_measurements = self.getColocalisationForImg(images[coloc_channel])
             self.colocalisation[HEADER_KEY] = headings
