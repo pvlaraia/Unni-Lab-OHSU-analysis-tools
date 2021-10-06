@@ -27,9 +27,48 @@ Now unzip/extract the contents of UnniImaging.zip. That's going to add files to 
 
 # Run Imaging
 
-After going through the above steps, open ImageJ, and you should see a new option in the title bar labeled 'OHSU' (next to 'Window' and 'Help'). Select `OHSU -> Run Imaging` to run the test, and follow the prompts. It'll ask for an input folder (The folder containing the images you intend to procss), and an output folder (where the results will be saved)
+## Run
+
+Open ImageJ, and you should see a new option in the title bar labeled 'OHSU' (next to 'Window' and 'Help'). Select `OHSU -> Run Imaging` to run the test, and follow the prompts. It'll ask for an input folder (The folder containing the images you intend to procss), and an output folder (where the results will be saved)
 
 ![](./readme/gifs/running_imaging.gif)
+
+## Config
+
+In the `scripts/OHSU` folder is a `config.json` file. Open this file in a text editor (editing with Notepad in Windows for example) in order to tweak the channels
+for the imaging that's going to be run. The default values are:
+
+```
+{
+  "channels": {
+    "1": "Syn1",
+    "2": "gH2AX",
+    "3": "DAPI"
+  },
+  "mainChannel": "3",
+  "colocChannel": "1"
+}
+```
+
+which means we have 3 channels in the image. Channel 1 is 'Syn1', Channel 2 is 'gH2AX', Channel 3 is "DAPI". 
+
+mainChannel "3" means the DAPI is what our main channel is for which we're going to be grabbing the threshold
+
+colocChannel "1" means Syn1 is the focus of colocalisation
+
+If one wanted to change this based on an experiment where Syn1 is the mainChannel and we don't have colocalisation, the config file would become
+
+```
+{
+  "channels": {
+    "1": "Syn1",
+    "2": "SomeMarker"
+  },
+  "mainChannel": "1"
+}
+```
+
+NOTE: It's important that there are no trailing commas in the json file. You can use a text editor with JSON formatting/syntax checking to avoid these kinds of issues
 
 # Colocalisation Test "Results Window" bugfix
 
