@@ -15,18 +15,15 @@ HEADER_KEY = '__HEADER__'
 def run():
 
     config = Config.getConfig()
-    channel1 = config["channels"]["1"]
-    channel2 = config["channels"]["2"]
-    channel3 = config["channels"]["3"]
 
     gd = GenericDialog('Instructions')
     gd.addMessage('1. When prompted, choose the input folder (Where are the files we want to analyze?)')
     gd.addMessage('2. When prompted, choose the output folder (Where should we put the results?)')
     gd.addMessage('3. Start processing images from the input folder. For each image, you will be asked to select a Threshold.')
     gd.addMessage('Channels:')
-    gd.addMessage('Channel 1 - ' + channel1)
-    gd.addMessage('Channel 2 - ' + channel2)
-    gd.addMessage('Channel 3 - ' + channel3)
+    gd.addMessage('Channel 1 - ' + config["channels"]["1"])
+    gd.addMessage('Channel 2 - ' + config["channels"]["2"])
+    gd.addMessage('Channel 3 - ' + config["channels"]["3"])
     gd.showDialog()
     if (gd.wasCanceled()):
         return 0
@@ -110,17 +107,23 @@ class ImageProcessor:
         filename = os.path.basename(imgpath)
         imgName = os.path.splitext(filename)[0]
 
-        dapi_threshold = img.getThreshold('DAPI')
-        # routine to select and create single images of the Syn1, gH2AX and DAPI channels and then close the parent z-stack
-        syn1 = img.createStackedImage('Syn1', 1)
-        gh2ax = img.createStackedImage('gH2AX', 2)
-        dapi = img.createStackedImage('DAPI', 3)
+        config = Config.getConfig()
+        threshold = img.getThreshold(config["channels"][config["mainChannel"]])
+        # routine to select and create single images of the channels and then close the parent z-stack
+        channel_1_img = img.createStackedImage(config["channels"]["1"], 1)
+        channel_2_img = img.createStackedImage(config["channels"]["2"], 2)
+        channel_3_img = img.createStackedImage(config["channels"]["3"], 3)
+        images = {
+            "1": channel_1_img,
+            "2": channel_2_img,
+            "3": channel_3_img,
+        }
         img.close()
 
         # routine to create ROIs for each nucleus using a set threshold, saves a nuclear mask image and then closes it, saves nuclei properties and the nuclear ROIs
         # save DAPI TIFF
-        dapi.select()
-        IJ.setThreshold(dapi_threshold, 65535)
+        images[config["mainChannel"]].select()
+        IJ.setThreshold(threshold, 65535)
 
         self.getRoiManager().runCommand('Show All with labels')
         IJ.run("Analyze Particles...", "size=500-Infinity show=Outlines add slice")
@@ -129,32 +132,34 @@ class ImageProcessor:
         IJ.saveAsTiff(drawing, '{}/{}'.format(self.outputDir.path, tif_name))
         drawing.close()
 
-        # DAPI
-        headings, dapi_measurements = self.getRoiMeasurements(dapi)
-        self.channel3Cells[HEADER_KEY] = headings
-        self.channel3Cells[imgName] = dapi_measurements
         self.getRoiManager().runCommand('Save', '{}/{}_RoiSet.zip'.format(self.outputDir.path, imgName))
 
-        # SYN1
-        headings, syn1_measurements = self.getRoiMeasurements(syn1)
+        # Channel1
+        headings, c1_measurements = self.getRoiMeasurements(channel_1_img)
         self.channel1Cells[HEADER_KEY] = headings
-        self.channel1Cells[imgName] = syn1_measurements
+        self.channel1Cells[imgName] = c1_measurements
 
-        # GH2AX
-        headings, gh2ax_measurements = self.getRoiMeasurements(gh2ax)
+        # Channel2
+        headings, c2_measurements = self.getRoiMeasurements(channel_2_img)
         self.channel2Cells[HEADER_KEY] = headings
-        self.channel2Cells[imgName] = gh2ax_measurements
+        self.channel2Cells[imgName] = c2_measurements
+
+        # Channel3
+        headings, c3_measurements = self.getRoiMeasurements(channel_3_img)
+        self.channel3Cells[HEADER_KEY] = headings
+        self.channel3Cells[imgName] = c3_measurements
 
         # Colocalisation
-        headings, coloc_measurements = self.getColocalisationForImg(syn1)
-        self.colocalisation[HEADER_KEY] = headings
-        self.colocalisation[imgName] = coloc_measurements
+        coloc_channel = config["colocChannel"]
+        if (coloc_channel is not None and config["channels"].has_key(coloc_channel)):
+            headings, coloc_measurements = self.getColocalisationForImg(images[coloc_channel])
+            self.colocalisation[HEADER_KEY] = headings
+            self.colocalisation[imgName] = coloc_measurements
 
         # close everything
         self.disposeRoiManager()
-        syn1.close()
-        gh2ax.close()
-        dapi.close()
+        for img in images.values():
+            img.close()
         Results().close()
 
 
@@ -169,10 +174,11 @@ class ImageProcessor:
         roiM = self.getRoiManager()
         headers = None
         collection = []
+        config = Config.getConfig()
         for i in range(0, roiM.getCount()):
             img.select()
             roiM.select(i)
-            IJ.run('Colocalization Test', 'channel_1=Syn1 channel_2=gH2AX roi=[ROI in channel 1 ] randomization=[Fay (x,y,z translation)] current_slice')
+            IJ.run('Colocalization Test', 'channel_1={} channel_2={} roi=[ROI in channel {} ] randomization=[Fay (x,y,z translation)] current_slice'.format(config["channels"]["1"], config["channels"]["2"], config["colocChannel"]))
             resultsTextWindow = WindowManager.getWindow('Results')
             textPanel = resultsTextWindow.getTextPanel()
             headings = textPanel.getOrCreateResultsTable().getColumnHeadings().split("\t")

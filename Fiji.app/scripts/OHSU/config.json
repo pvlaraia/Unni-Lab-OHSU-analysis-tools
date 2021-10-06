@@ -1,8 +1,9 @@
 {
   "channels": {
     "1": "Syn1",
-    "2": "gh2ax",
+    "2": "gH2AX",
     "3": "DAPI"
   },
-  "mainChannel": 3
+  "mainChannel": "3",
+  "colocChannel": "1"
 }
