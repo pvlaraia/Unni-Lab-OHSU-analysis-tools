@@ -1,7 +1,8 @@
 import codecs
 import csv
-import json
 import os
+
+
 from ohsu.config.config import Config
 from ohsu.file_manager.directory import IJDirectory
 from ohsu.image.image import Image
