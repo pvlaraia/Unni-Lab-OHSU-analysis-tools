@@ -141,18 +141,8 @@ class ImageProcessor:
 
         # routine to create ROIs for each nucleus using a set threshold, saves a nuclear mask image and then closes it, saves nuclei properties and the nuclear ROIs
         # save TIFF
-        images[config["mainChannel"]].select()
-        IJ.setThreshold(threshold, 65535)
-
-        self.getRoiManager().runCommand('Show All with labels')
-        IJ.run("Analyze Particles...", "size=500-Infinity show=Outlines add slice")
-        drawing = IJ.getImage()
-        tif_name = 'Drawing of {}.tif'.format(imgName)
-        IJ.saveAsTiff(drawing, '{}/{}'.format(self.outputDir.path, tif_name))
-        drawing.close()
-
-        self.getRoiManager().runCommand('Save', '{}/{}_RoiSet.zip'.format(self.outputDir.path, imgName))
-
+        self.analyzeParticlesAndCreateROIs(images[config["mainChannel"]], imgName, threshold)
+        
         for channel, channel_img in images.items():
             headings, measurements = self.getRoiMeasurements(channel_img)
             self.dataCollection[channel][HEADER_KEY] = headings
@@ -170,6 +160,20 @@ class ImageProcessor:
         for img in images.values():
             img.close()
         Results().close()
+
+
+    def analyzeParticlesAndCreateROIs(self, img, imgName, threshold):
+        img.select()
+        IJ.setThreshold(threshold, 65535)
+
+        self.getRoiManager().runCommand('Show All with labels')
+        IJ.run("Analyze Particles...", "size=500-Infinity show=Outlines add slice")
+        drawing = IJ.getImage()
+        tif_name = 'Drawing of {}.tif'.format(imgName)
+        IJ.saveAsTiff(drawing, '{}/{}'.format(self.outputDir.path, tif_name))
+        drawing.close()
+
+        self.getRoiManager().runCommand('Save', '{}/{}_RoiSet.zip'.format(self.outputDir.path, imgName))
 
 
     '''
