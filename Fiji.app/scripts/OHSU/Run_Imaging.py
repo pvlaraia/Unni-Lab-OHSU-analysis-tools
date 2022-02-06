@@ -3,7 +3,9 @@ import csv
 import os
 
 
+from ohsu.config.colocalisation_config import ColocalisationConfig
 from ohsu.config.config import Config
+from ohsu.config.core_config import CoreConfig
 from ohsu.file_manager.directory import IJDirectory
 from ohsu.image.image import Image
 from ohsu.results.results import Results
@@ -16,14 +18,13 @@ HEADER_KEY = '__HEADER__'
 def run():
 
     validateConfig()
-    config = Config.getConfig()
 
     gd = GenericDialog('Instructions')
     gd.addMessage('1. When prompted, choose the input folder (Where are the files we want to analyze?)')
     gd.addMessage('2. When prompted, choose the output folder (Where should we put the results?)')
     gd.addMessage('3. Start processing images from the input folder. For each image, you will be asked to select a Threshold.')
     gd.addMessage('Channels:')
-    for channel, label in config['channels'].items():
+    for channel, label in CoreConfig.getChannels().items():
         gd.addMessage('{} - {}'.format(channel, label))
     gd.showDialog()
     if (gd.wasCanceled()):
@@ -36,22 +37,8 @@ def run():
     Config.close()
 
 def validateConfig():
-    config = Config.getConfig()
-    channels = config['channels']
-    mainChannel = config['mainChannel']
-    colocChannel = config['colocChannel'] if config.has_key('colocChannel') else None
-
-    if channels is None:
-        raise Exception('"channels" must be defined in config.json')
-    
-    if mainChannel is None:
-        raise Exception('"mainChannel" must be defined in config.json')
-
-    if mainChannel not in channels.keys():
-        raise Exception('mainChannel "{}" does not exist in "channels" in config.json'.format(mainChannel))
-
-    if colocChannel is not None and colocChannel not in channels.keys():
-        raise Exception('colocChannel "{}" does not exist in "channels" in config.json'.format(colocChannel))
+    CoreConfig.validate()
+    ColocalisationConfig.validate()
 
 
 class ImageProcessor:
@@ -60,7 +47,7 @@ class ImageProcessor:
         self.outputDir = outputDir
         self.roiManager = None
         self.dataCollection = {}
-        channels = Config.getConfig()['channels']
+        channels = CoreConfig.getChannels()
         for channel in channels.keys():
             self.dataCollection[channel] = {}
         self.colocalisation = {}
@@ -84,12 +71,11 @@ class ImageProcessor:
     return void
     ''' 
     def postProcessData(self):
-        config = Config.getConfig()
-        channels = config["channels"]
+        channels = CoreConfig.getChannels()
         for channel, cellData in self.dataCollection.items():
             self.saveCollection(cellData, '{}_cells.csv'.format(channels[channel]))
         
-        if config.has_key('colocChannel'):
+        if ColocalisationConfig.getChannel() is not None:
             self.saveCollection(self.colocalisation, 'colocalisation.csv')
 
     '''
@@ -130,9 +116,8 @@ class ImageProcessor:
         filename = os.path.basename(imgpath)
         imgName = os.path.splitext(filename)[0]
 
-        config = Config.getConfig()
-        channels = config['channels']
-        threshold = img.getThreshold(channels[config["mainChannel"]])
+        channels = CoreConfig.getChannels()
+        threshold = img.getThreshold(channels[CoreConfig.getMaskChannel()])
         # routine to select and create single images of the channels and then close the parent z-stack
         images = {}
         for channel, label in channels.items():
@@ -141,7 +126,7 @@ class ImageProcessor:
 
         # routine to create ROIs for each nucleus using a set threshold, saves a nuclear mask image and then closes it, saves nuclei properties and the nuclear ROIs
         # save TIFF
-        self.analyzeParticlesAndCreateROIs(images[config["mainChannel"]], imgName, threshold)
+        self.analyzeParticlesAndCreateROIs(images[CoreConfig.getMaskChannel()], imgName, threshold)
         
         for channel, channel_img in images.items():
             headings, measurements = self.getRoiMeasurements(channel_img)
@@ -149,8 +134,8 @@ class ImageProcessor:
             self.dataCollection[channel][imgName] = measurements
 
         # Colocalisation
-        coloc_channel = config["colocChannel"] if config.has_key('colocChannel') else None
-        if (coloc_channel is not None and config["channels"].has_key(coloc_channel)):
+        coloc_channel = ColocalisationConfig.getChannel()
+        if (coloc_channel is not None and CoreConfig.getChannels().has_key(coloc_channel)):
             headings, coloc_measurements = self.getColocalisationForImg(images[coloc_channel])
             self.colocalisation[HEADER_KEY] = headings
             self.colocalisation[imgName] = coloc_measurements
@@ -187,11 +172,12 @@ class ImageProcessor:
         roiM = self.getRoiManager()
         headers = None
         collection = []
-        config = Config.getConfig()
+        channels = CoreConfig.getChannels()
+        colocChannel = ColocalisationConfig.getChannel()
         for i in range(0, roiM.getCount()):
             img.select()
             roiM.select(i)
-            IJ.run('Colocalization Test', 'channel_1={} channel_2={} roi=[ROI in channel {} ] randomization=[Fay (x,y,z translation)] current_slice'.format(config["channels"]["1"], config["channels"]["2"], config["colocChannel"]))
+            IJ.run('Colocalization Test', 'channel_1={} channel_2={} roi=[ROI in channel {} ] randomization=[Fay (x,y,z translation)] current_slice'.format(channels["1"], channels["2"], colocChannel))
             resultsTextWindow = WindowManager.getWindow('Results')
             textPanel = resultsTextWindow.getTextPanel()
             headings = textPanel.getOrCreateResultsTable().getColumnHeadings().split("\t")

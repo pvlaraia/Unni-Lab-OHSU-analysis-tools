@@ -4,7 +4,7 @@ class Config:
     __conf = None
 
     @staticmethod
-    def getConfig():
+    def get():
         return Config.__getConfig()
 
     @staticmethod

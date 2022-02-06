@@ -1,9 +1,13 @@
 {
-  "channels": {
-    "1": "Syn1",
-    "2": "gH2AX",
-    "3": "DAPI"
+  "core": {
+    "channels": {
+      "1": "Syn1",
+      "2": "gH2AX",
+      "3": "DAPI"
+    },
+    "maskChannel": "3"
   },
-  "mainChannel": "3",
-  "colocChannel": "1"
+  "colocalisation": {
+    "channel": "1"
+  }
 }
