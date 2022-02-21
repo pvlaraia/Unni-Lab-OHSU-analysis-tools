@@ -1,7 +1,7 @@
 from fiji.util.gui import GenericDialogPlus
 from ij import IJ
 from java.awt.event import ActionListener
-from java.awt import GridLayout, Label, Panel, TextField
+from java.awt import Button, GridLayout, Label, Panel, TextField
 from ohsu.config.core_config import CoreConfig
 
 def run():
@@ -21,7 +21,7 @@ def run():
     gd.addComponent(channelPanel)
     
 
-    gd.addButton('Add Channel', ChannelHandler(channelPanel))
+    gd.addButton('Add Channel', AddChannelHandler(channelPanel))
 
 
     gd.addMessage('Colocalisation')
@@ -47,18 +47,46 @@ class ChannelPanel(Panel):
             channels[idx] =  name
         return channels
 
-    def addChannel(self, index, name):
+    def addChannel(self, channelNumber, name):
         panelRow = Panel()
-        field = TextField(name, 35)
-        panelRow.add(Label(str(index)))
-        panelRow.add(field)
-        panelRow.add(Label('X'))
+        channelNumber = str(channelNumber)
+        removeButton = Button('Remove')
+        removeButton.addActionListener(RemoveChannelHandler(self, channelNumber))
+        panelRow.add(Label(channelNumber))
+        panelRow.add(TextField(name, 35))
+        panelRow.add(removeButton)
         self.add(panelRow)
+        self.repaintDialog()
+
+    def removeChannel(self, channelNumber):
+        self.remove(self.getComponentForChannel(channelNumber))
+        self.regenerateChannelComponents()
+        self.repaintDialog()
+
+    def regenerateChannelComponents(self):
+        components = self.getComponents()
+        for idx, component in enumerate(components):
+            newChannelNum = str(idx + 1)
+            channelNumLabel = component.getComponent(0)
+            channelButton = component.getComponent(2)
+            
+            channelNumLabel.setText(newChannelNum)
+            [channelButton.removeActionListener(listener) for listener in channelButton.getActionListeners()]
+            channelButton.addActionListener(RemoveChannelHandler(self, newChannelNum))
+
+
+    def getComponentForChannel(self, channelNumber):
+        components = self.getComponents()
+        IJ.log('remove ' + channelNumber)
+        return components[int(channelNumber) - 1]
+        
+
+    def repaintDialog(self):
         self.gd.validate()
         self.gd.pack()
         self.gd.repaint()
 
-class ChannelHandler(ActionListener):
+class AddChannelHandler(ActionListener):
 
     def __init__(self, channelPanel):
         self.channelPanel = channelPanel
@@ -67,6 +95,17 @@ class ChannelHandler(ActionListener):
     def actionPerformed(self, event):
         existingChannels = self.channelPanel.getChannels()
         self.channelPanel.addChannel(len(existingChannels) + 1, '')
+
+class RemoveChannelHandler(ActionListener):
+    
+    def __init__(self, channelPanel, channelNumber):
+        self.channelPanel = channelPanel
+        self.channelNumber = channelNumber
+        super(ActionListener, self).__init__()
+
+    def actionPerformed(self, event):
+        self.channelPanel.removeChannel(self.channelNumber)
+
 
 class State(ActionListener):
     def actionPerformed(self, event):
