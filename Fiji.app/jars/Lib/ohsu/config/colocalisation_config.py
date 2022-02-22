@@ -7,7 +7,7 @@ class ColocalisationConfig:
     @staticmethod
     def getChannel():
         config = ColocalisationConfig.get()
-        return config['channel'] if config.has_key('channel') else None
+        return config['channel'] if config is not None and config.has_key('channel') else None
     
     @staticmethod
     def setChannel(channel):
@@ -16,11 +16,12 @@ class ColocalisationConfig:
             config.pop('channel', None)
         else:
             config['channel'] = channel
+        Config.set('colocalisation', config)
 
     @staticmethod
     def get():
         config = Config.get()
-        return config['colocalisation'] if config.has_key('colocalisation') else None
+        return config['colocalisation'] if config.has_key('colocalisation') else {}
 
     @staticmethod
     def validate():

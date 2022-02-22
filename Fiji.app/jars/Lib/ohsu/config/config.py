@@ -23,7 +23,10 @@ class Config:
     @staticmethod
     def __getConfig():
         if (Config.__conf is None):
-            with open('./scripts/OHSU/config.json') as stream:
-                Config.__conf = json.load(stream)
+            try:
+                with open('./scripts/OHSU/config.json') as stream:
+                    Config.__conf = json.load(stream)
+            except Exception:
+                Config.__conf = {}
         return Config.__conf
 

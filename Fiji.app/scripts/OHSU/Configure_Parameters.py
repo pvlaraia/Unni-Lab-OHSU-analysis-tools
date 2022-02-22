@@ -42,7 +42,7 @@ class ChannelPanel(OHSUPanel):
         c = GridBagConstraints()
         self.channels = Panel()
         self.channels.setLayout(GridLayout(0, 1))
-        for channel, channelName in CoreConfig.getChannels().items():
+        for channel, channelName in (CoreConfig.getChannels().items() if CoreConfig.getChannels() is not None else range(0)):
             self.addChannel(channel, channelName)
 
         c.gridwidth = GridBagConstraints.REMAINDER
