@@ -2,8 +2,9 @@ from fiji.util.gui import GenericDialogPlus
 from ij import IJ
 from java.awt.event import ActionListener, ItemListener
 from java.awt import Button, Checkbox, GridBagConstraints, GridBagLayout, GridLayout, Label, Panel, TextField
-from ohsu.config.core_config import CoreConfig
 from ohsu.config.colocalisation_config import ColocalisationConfig
+from ohsu.config.config import Config
+from ohsu.config.core_config import CoreConfig
 from ohsu.gui.ohsu_panel import OHSUPanel
 
 def run():
@@ -15,14 +16,20 @@ def run():
     gd.addMessage('Core Configuration')
     gd.addComponent(channelPanel)
     gd.addComponent(colocPanel)
-
-    gd.addButton('Save', SaveHandler(gd))
    
     gd.showDialog()
     if (gd.wasCanceled()):
         return 0
 
-    IJ.log(str(len(gd.getStringFields())))
+    channels = channelPanel.getChannels()
+    maskChannel = channelPanel.getMaskChannel()
+    CoreConfig.setChannels(channels)
+    CoreConfig.setMaskChannel(maskChannel)
+
+    colocChannel = colocPanel.getChannel()
+    ColocalisationConfig.setChannel(colocChannel)
+    
+    Config.save()
 
 '''
 CHANNELS
@@ -45,10 +52,14 @@ class ChannelPanel(OHSUPanel):
         addButton.addActionListener(AddChannelHandler(self))
         self.add(addButton, c)
 
+        self.maskTextField = TextField(CoreConfig.getMaskChannel(), 35)
         maskPanel = Panel()
         maskPanel.add(Label('Mask Channel'))
-        maskPanel.add(TextField(CoreConfig.getMaskChannel(), 35))
+        maskPanel.add(self.maskTextField)
         self.add(maskPanel, c)
+
+    def getMaskChannel(self):
+        return self.maskTextField.getText()
 
     def getChannels(self):
         components = self.channels.getComponents()
@@ -122,10 +133,16 @@ class ColocalisationPanel(OHSUPanel):
         isEnabled = ColocalisationConfig.getChannel() is not None
         self.checkbox = Checkbox('Enable colocalisation', isEnabled)
         self.checkbox.addItemListener(self.ToggleHandler(self))
+        self.textField = TextField(ColocalisationConfig.getChannel(), 35)
         self.textPanel = Panel()
-        self.textPanel.add(Label('Channel'))
-        self.textPanel.add(TextField(35))
+        self.textPanel.add(Label('Colocalisation Channel'))
+        self.textPanel.add(self.textField)
         self.buildInitial()
+
+    def getChannel(self):
+        if not self.checkbox.getState():
+            return None
+        return self.textField.getText()
 
     def buildInitial(self):
         self.setLayout(GridLayout(0, 1))
@@ -147,15 +164,5 @@ class ColocalisationPanel(OHSUPanel):
 
         def itemStateChanged(self, event):
             self.colocPanel.handleToggleChange()
-
-
-
-class SaveHandler(ActionListener):
-    def __init__(self, gd):
-        super(ActionListener, self).__init__()
-        self.gd = gd
-
-    def actionPerformed(self, event):
-        IJ.log('done')
 
 run()

@@ -8,6 +8,14 @@ class ColocalisationConfig:
     def getChannel():
         config = ColocalisationConfig.get()
         return config['channel'] if config.has_key('channel') else None
+    
+    @staticmethod
+    def setChannel(channel):
+        config = ColocalisationConfig.get()
+        if channel is None:
+            config.pop('channel', None)
+        else:
+            config['channel'] = channel
 
     @staticmethod
     def get():

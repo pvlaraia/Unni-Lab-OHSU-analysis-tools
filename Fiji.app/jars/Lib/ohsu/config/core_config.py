@@ -7,11 +7,35 @@ class CoreConfig:
     def getMaskChannel():
         config = CoreConfig.get()
         return config['maskChannel'] if config.has_key('maskChannel') else None
+    
+    @staticmethod
+    def setMaskChannel(num):
+        config = CoreConfig.get()
+        config['maskChannel'] = num
+        Config.set('core', config)
 
     @staticmethod
     def getChannels():
         config = CoreConfig.get()
         return config['channels'] if config.has_key('channels') else None
+
+    @staticmethod
+    def setChannels(channels):
+        config = CoreConfig.get()
+        config['channels'] = channels
+        Config.set('core', config)
+
+    @staticmethod
+    def addChannel(num, label):
+        channels = CoreConfig.getChannels()
+        channels[str(num)] = label
+        CoreConfig.setChannels(channels)
+
+    @staticmethod
+    def removeChannel(num):
+        channels = CoreConfig.getChannels()
+        del channels[str(num)]
+        CoreConfig.setChannels(channels)
 
     @staticmethod
     def get():
