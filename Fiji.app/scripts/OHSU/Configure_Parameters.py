@@ -1,45 +1,57 @@
 from fiji.util.gui import GenericDialogPlus
 from ij import IJ
 from java.awt.event import ActionListener, ItemListener
-from java.awt import Button, Checkbox, GridLayout, Label, Panel, TextField
+from java.awt import Button, Checkbox, GridBagConstraints, GridBagLayout, GridLayout, Label, Panel, TextField
 from ohsu.config.core_config import CoreConfig
 from ohsu.config.colocalisation_config import ColocalisationConfig
 from ohsu.gui.ohsu_panel import OHSUPanel
 
 def run():
-    gd = GenericDialogPlus('Instructions')
+    gd = GenericDialogPlus('Configure Parameters')
 
-    state = State()
     channelPanel = ChannelPanel(gd)
     colocPanel = ColocalisationPanel(gd)
 
-    channelPanel.setLayout(GridLayout(0,1))
-
     gd.addMessage('Core Configuration')
-
-    for channel, channelName in CoreConfig.getChannels().items():
-        channelPanel.addChannel(channel, channelName)
-
     gd.addComponent(channelPanel)
-    gd.addButton('Add Channel', AddChannelHandler(channelPanel))
-
-    gd.addStringField('Mask Channel', CoreConfig.getMaskChannel(), 35)
-    
     gd.addComponent(colocPanel)
 
-    gd.addButton('Save', state)
+    gd.addButton('Save', SaveHandler(gd))
    
     gd.showDialog()
     if (gd.wasCanceled()):
         return 0
+
+    IJ.log(str(len(gd.getStringFields())))
 
 '''
 CHANNELS
 '''
 class ChannelPanel(OHSUPanel):
 
+    def __init__(self, gd):
+        OHSUPanel.__init__(self, gd)
+        self.setLayout(GridBagLayout())
+        c = GridBagConstraints()
+        self.channels = Panel()
+        self.channels.setLayout(GridLayout(0, 1))
+        for channel, channelName in CoreConfig.getChannels().items():
+            self.addChannel(channel, channelName)
+
+        c.gridwidth = GridBagConstraints.REMAINDER
+        self.add(self.channels, c)
+
+        addButton = Button('Add Channel')
+        addButton.addActionListener(AddChannelHandler(self))
+        self.add(addButton, c)
+
+        maskPanel = Panel()
+        maskPanel.add(Label('Mask Channel'))
+        maskPanel.add(TextField(CoreConfig.getMaskChannel(), 35))
+        self.add(maskPanel, c)
+
     def getChannels(self):
-        components = self.getComponents()
+        components = self.channels.getComponents()
         channels = {}
         for component in components:
             idx = component.getComponent(0).getText()
@@ -55,16 +67,16 @@ class ChannelPanel(OHSUPanel):
         panelRow.add(Label(channelNumber))
         panelRow.add(TextField(name, 35))
         panelRow.add(removeButton)
-        self.add(panelRow)
+        self.channels.add(panelRow)
         self.repaintDialog()
 
     def removeChannel(self, channelNumber):
-        self.remove(self.getComponentForChannel(channelNumber))
+        self.channels.remove(self.getComponentForChannel(channelNumber))
         self.regenerateChannelComponents()
         self.repaintDialog()
 
     def regenerateChannelComponents(self):
-        components = self.getComponents()
+        components = self.channels.getComponents()
         for idx, component in enumerate(components):
             newChannelNum = str(idx + 1)
             channelNumLabel = component.getComponent(0)
@@ -76,8 +88,7 @@ class ChannelPanel(OHSUPanel):
 
 
     def getComponentForChannel(self, channelNumber):
-        components = self.getComponents()
-        IJ.log('remove ' + channelNumber)
+        components = self.channels.getComponents()
         return components[int(channelNumber) - 1]
 
 class AddChannelHandler(ActionListener):
@@ -139,7 +150,11 @@ class ColocalisationPanel(OHSUPanel):
 
 
 
-class State(ActionListener):
+class SaveHandler(ActionListener):
+    def __init__(self, gd):
+        super(ActionListener, self).__init__()
+        self.gd = gd
+
     def actionPerformed(self, event):
         IJ.log('done')
 
