@@ -5,6 +5,7 @@ from java.awt import Button, Checkbox, GridBagConstraints, GridBagLayout, GridLa
 from ohsu.config.colocalisation_config import ColocalisationConfig
 from ohsu.config.config import Config
 from ohsu.config.core_config import CoreConfig
+from ohsu.config.foci_config import FociConfig
 from ohsu.gui.ohsu_panel import OHSUPanel
 
 def run():
@@ -12,22 +13,21 @@ def run():
 
     channelPanel = ChannelPanel(gd)
     colocPanel = ColocalisationPanel(gd)
+    fociPanel = FociPanel(gd)
 
     gd.addMessage('Core Configuration')
     gd.addComponent(channelPanel)
     gd.addComponent(colocPanel)
+    gd.addComponent(fociPanel)
    
     gd.showDialog()
     if (gd.wasCanceled()):
         return 0
 
-    channels = channelPanel.getChannels()
-    maskChannel = channelPanel.getMaskChannel()
-    CoreConfig.setChannels(channels)
-    CoreConfig.setMaskChannel(maskChannel)
-
-    colocChannel = colocPanel.getChannel()
-    ColocalisationConfig.setChannel(colocChannel)
+    CoreConfig.setChannels(channelPanel.getChannels())
+    CoreConfig.setMaskChannel(channelPanel.getMaskChannel())
+    ColocalisationConfig.setChannel(colocPanel.getChannel())
+    FociConfig.setChannel(fociPanel.getChannel())
     
     Config.save()
 
@@ -164,5 +164,46 @@ class ColocalisationPanel(OHSUPanel):
 
         def itemStateChanged(self, event):
             self.colocPanel.handleToggleChange()
+
+'''
+FOCI
+'''
+class FociPanel(OHSUPanel):
+
+    def __init__(self, gd):
+        OHSUPanel.__init__(self, gd)
+        isEnabled = FociConfig.getChannel() is not None
+        self.checkbox = Checkbox('Enable foci analysis', isEnabled)
+        self.checkbox.addItemListener(self.ToggleHandler(self))
+        self.textField = TextField(FociConfig.getChannel(), 35)
+        self.textPanel = Panel()
+        self.textPanel.add(Label('Foci Channel'))
+        self.textPanel.add(self.textField)
+        
+        self.setLayout(GridLayout(0, 1))
+        self.add(self.checkbox)
+        self.handleToggleChange()
+
+    def getChannel(self):
+        if not self.checkbox.getState():
+            return None
+        return self.textField.getText()
+
+    def handleToggleChange(self):
+        if self.checkbox.getState():
+            self.add(self.textPanel)
+        else:
+            self.remove(self.textPanel)
+        self.repaintDialog()
+
+    class ToggleHandler(ItemListener):
+        
+        def __init__(self, fociPanel):
+            super(ItemListener, self).__init__()
+            self.fociPanel = fociPanel
+
+        def itemStateChanged(self, event):
+            self.fociPanel.handleToggleChange()
+
 
 run()
