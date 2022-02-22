@@ -1,30 +1,31 @@
 from fiji.util.gui import GenericDialogPlus
 from ij import IJ
-from java.awt.event import ActionListener
-from java.awt import Button, GridLayout, Label, Panel, TextField
+from java.awt.event import ActionListener, ItemListener
+from java.awt import Button, Checkbox, GridLayout, Label, Panel, TextField
 from ohsu.config.core_config import CoreConfig
+from ohsu.config.colocalisation_config import ColocalisationConfig
+from ohsu.gui.ohsu_panel import OHSUPanel
 
 def run():
-    coreConfig = CoreConfig.get()
     gd = GenericDialogPlus('Instructions')
 
     state = State()
-    channelVerticalLayout = GridLayout(0,1)
     channelPanel = ChannelPanel(gd)
-    channelPanel.setLayout(channelVerticalLayout)
+    colocPanel = ColocalisationPanel(gd)
+
+    channelPanel.setLayout(GridLayout(0,1))
 
     gd.addMessage('Core Configuration')
 
-    for channel, channelName in coreConfig['channels'].items():
+    for channel, channelName in CoreConfig.getChannels().items():
         channelPanel.addChannel(channel, channelName)
 
     gd.addComponent(channelPanel)
-    
-
     gd.addButton('Add Channel', AddChannelHandler(channelPanel))
 
-
-    gd.addMessage('Colocalisation')
+    gd.addStringField('Mask Channel', CoreConfig.getMaskChannel(), 35)
+    
+    gd.addComponent(colocPanel)
 
     gd.addButton('Save', state)
    
@@ -32,11 +33,10 @@ def run():
     if (gd.wasCanceled()):
         return 0
 
-class ChannelPanel(Panel):
-
-    def __init__(self, gd):
-        self.gd = gd
-        super(Panel, self).__init__()
+'''
+CHANNELS
+'''
+class ChannelPanel(OHSUPanel):
 
     def getChannels(self):
         components = self.getComponents()
@@ -69,7 +69,7 @@ class ChannelPanel(Panel):
             newChannelNum = str(idx + 1)
             channelNumLabel = component.getComponent(0)
             channelButton = component.getComponent(2)
-            
+
             channelNumLabel.setText(newChannelNum)
             [channelButton.removeActionListener(listener) for listener in channelButton.getActionListeners()]
             channelButton.addActionListener(RemoveChannelHandler(self, newChannelNum))
@@ -79,12 +79,6 @@ class ChannelPanel(Panel):
         components = self.getComponents()
         IJ.log('remove ' + channelNumber)
         return components[int(channelNumber) - 1]
-        
-
-    def repaintDialog(self):
-        self.gd.validate()
-        self.gd.pack()
-        self.gd.repaint()
 
 class AddChannelHandler(ActionListener):
 
@@ -105,6 +99,44 @@ class RemoveChannelHandler(ActionListener):
 
     def actionPerformed(self, event):
         self.channelPanel.removeChannel(self.channelNumber)
+
+
+'''
+COLOCALISATION
+'''
+class ColocalisationPanel(OHSUPanel):
+
+    def __init__(self, gd):
+        OHSUPanel.__init__(self, gd)
+        isEnabled = ColocalisationConfig.getChannel() is not None
+        self.checkbox = Checkbox('Enable colocalisation', isEnabled)
+        self.checkbox.addItemListener(self.ToggleHandler(self))
+        self.textPanel = Panel()
+        self.textPanel.add(Label('Channel'))
+        self.textPanel.add(TextField(35))
+        self.buildInitial()
+
+    def buildInitial(self):
+        self.setLayout(GridLayout(0, 1))
+        self.add(self.checkbox)
+        self.handleToggleChange()
+
+    def handleToggleChange(self):
+        if self.checkbox.getState():
+            self.add(self.textPanel)
+        else:
+            self.remove(self.textPanel)
+        self.repaintDialog()
+
+    class ToggleHandler(ItemListener):
+        
+        def __init__(self, colocPanel):
+            super(ItemListener, self).__init__()
+            self.colocPanel = colocPanel
+
+        def itemStateChanged(self, event):
+            self.colocPanel.handleToggleChange()
+
 
 
 class State(ActionListener):
