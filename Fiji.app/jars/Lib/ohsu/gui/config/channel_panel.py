@@ -1,7 +1,8 @@
-from java.awt.event import ActionListener
+from java.awt.event import ActionListener, KeyListener
 from java.awt import Button, GridBagConstraints, GridBagLayout, GridLayout, Label, Panel, TextField
 from ohsu.config.core_config import CoreConfig
 from ohsu.gui.ohsu_panel import OHSUPanel
+from ij import IJ
 
 class ChannelPanel(OHSUPanel):
 
@@ -45,16 +46,24 @@ class ChannelPanel(OHSUPanel):
         channelNumber = str(channelNumber)
         removeButton = Button('Remove')
         removeButton.addActionListener(RemoveChannelHandler(self, channelNumber))
+        field = TextField(name, 35)
+        field.addKeyListener(ChannelTextChangeHandler(self))
         panelRow.add(Label(channelNumber))
-        panelRow.add(TextField(name, 35))
+        panelRow.add(field)
         panelRow.add(removeButton)
         self.channels.add(panelRow)
+        self.runListeners()
         self.repaintDialog()
 
     def removeChannel(self, channelNumber):
         self.channels.remove(self.getComponentForChannel(channelNumber))
         self.regenerateChannelComponents()
+        self.runListeners()
         self.repaintDialog()
+
+    def runListeners(self):
+        for listener in self.listeners:
+            listener.onChannelsChanged(self.getChannels())
 
     def regenerateChannelComponents(self):
         components = self.channels.getComponents()
@@ -71,6 +80,9 @@ class ChannelPanel(OHSUPanel):
     def getComponentForChannel(self, channelNumber):
         components = self.channels.getComponents()
         return components[int(channelNumber) - 1]
+
+    def addListener(self, listener):
+        self.listeners.append(listener)
 
 class AddChannelHandler(ActionListener):
 
@@ -91,3 +103,23 @@ class RemoveChannelHandler(ActionListener):
 
     def actionPerformed(self, event):
         self.channelPanel.removeChannel(self.channelNumber)
+
+class ChannelTextChangeHandler(KeyListener):
+
+    def __init__(self, channelPanel):
+        self.channelPanel = channelPanel
+        super(KeyListener, self).__init__()
+
+    def keyTyped(self, event):
+        pass
+
+    def keyPressed(self, event):
+        pass
+
+    def keyReleased(self, event):
+        self.channelPanel.runListeners()
+
+class ChannelListener():
+
+    def onChannelsChanged(self, channels):
+        pass
