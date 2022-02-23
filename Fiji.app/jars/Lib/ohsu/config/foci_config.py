@@ -5,17 +5,17 @@ from ohsu.config.core_config import CoreConfig
 class FociConfig:
 
     @staticmethod
-    def getChannel():
+    def getChannels():
         config = FociConfig.get()
-        return config['channel'] if config is not None and config.has_key('channel') else None
+        return config['channels'] if config is not None and config.has_key('channels') else None
     
     @staticmethod
-    def setChannel(channel):
+    def setChannels(channels):
         config = FociConfig.get()
-        if channel is None:
-            config.pop('channel', None)
+        if channels is None:
+            config.pop('channels', None)
         else:
-            config['channel'] = channel
+            config['channels'] = channels
         Config.set('foci', config)
 
     @staticmethod
@@ -25,6 +25,6 @@ class FociConfig:
 
     @staticmethod
     def validate():
-        channel = FociConfig.getChannel()
-        if channel is not None and channel not in CoreConfig.getChannels().keys():
-            raise Exception('fociChannel "{}" is not a valid channel, does not exist'.format(channel))
+        channels = FociConfig.getChannels()
+        if channels is not None and all(c in channels for c in CoreConfig.getChannels().keys()):
+            raise Exception('One of the foci channels is not a valid channel')
