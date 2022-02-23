@@ -12,20 +12,18 @@ class FociPanel(OHSUPanel):
         self.channelPanel = channelPanel
         self.channelPanel.addListener(ChannelChangeHandler(self))
         self.options = None
-
-        isEnabled = FociConfig.getChannels() is not None
-        self.checkbox = Checkbox('Enable foci analysis', isEnabled)
-        self.checkbox.addItemListener(self.ToggleHandler(self))
-        
-        self.regenerateOptions()
-        
         self.setLayout(GridBagLayout())
         self.c = GridBagConstraints()
         self.c.anchor = GridBagConstraints.CENTER
 
+        isEnabled = FociConfig.getChannels() is not None
+        self.checkbox = Checkbox('Enable foci analysis', isEnabled)
+        self.checkbox.addItemListener(self.ToggleHandler(self))
         checkboxConstraint = GridBagConstraints()
         checkboxConstraint.gridwidth = GridBagConstraints.REMAINDER
         self.add(self.checkbox, checkboxConstraint)
+        
+        self.regenerateOptions()
         self.handleToggleChange()
 
     def getOptions(self):
