@@ -47,10 +47,14 @@ class ImageProcessor:
         self.inputDir = inputDir
         self.outputDir = outputDir
         self.roiManager = None
-        self.dataCollection = {}
+        self.roiMeasurements = {}
         channels = CoreConfig.getChannels()
         for channel in channels.keys():
-            self.dataCollection[channel] = {}
+            self.roiMeasurements[channel] = {}
+
+        self.fociMeasurements = {}
+        for channel in (FociConfig.getChannels() or []):
+            self.fociMeasurements[channel] = {}
         self.colocalisation = {}
 
     '''
@@ -73,11 +77,14 @@ class ImageProcessor:
     ''' 
     def postProcessData(self):
         channels = CoreConfig.getChannels()
-        for channel, cellData in self.dataCollection.items():
+        for channel, cellData in self.roiMeasurements.items():
             self.saveCollection(cellData, '{}_cells.csv'.format(channels[channel]))
         
         if ColocalisationConfig.getChannel() is not None:
             self.saveCollection(self.colocalisation, 'colocalisation.csv')
+
+        for channel, fociData in self.fociMeasurements.items():
+            self.saveCollection(fociData, '{}_foci.csv'.format(channels[channel]))
 
     '''
     Save a collection to a file
@@ -131,8 +138,8 @@ class ImageProcessor:
         
         for channel, channel_img in images.items():
             headings, measurements = self.getRoiMeasurements(channel_img)
-            self.dataCollection[channel][HEADER_KEY] = headings
-            self.dataCollection[channel][imgName] = measurements
+            self.roiMeasurements[channel][HEADER_KEY] = headings
+            self.roiMeasurements[channel][imgName] = measurements
 
         # Colocalisation
         coloc_channel = ColocalisationConfig.getChannel()
@@ -145,7 +152,10 @@ class ImageProcessor:
         foci_channels = FociConfig.getChannels() or []
         if foci_channels:
             for foci_channel in foci_channels:
-                self.getFociForImg(images[foci_channel])
+                headings, measurements = self.getFociForImg(images[foci_channel])
+                self.fociMeasurements[foci_channel][HEADER_KEY] = headings
+                for roiIndex, measurement in measurements.items():
+                    self.fociMeasurements[foci_channel][imgName + '_ROI_' + roiIndex] = measurement
 
         # close everything
         self.disposeRoiManager()
@@ -191,10 +201,20 @@ class ImageProcessor:
             data = textPanel.getLine(0).split("\t")
             headers = headings if headers is None else headers
             collection.append(data)
-
         return (headers, collection)
 
+    '''
+    Given an img, the channel, and original imgName, run Foci analysis and collect data
+
+    @img Image - the image to run foci on
+    @channel string - the channel number
+    @imgName string - name of the original image
+
+    return tuple([headers], {roi, [measurements]}) - measurements grouped by ROI
+    '''
     def getFociForImg(self, img):
+        headers = None
+        collection = {}
         img.select()
         IJ.setThreshold(img.getThreshold(img.img.getTitle()), 65535)
         roiM = self.getRoiManager()
@@ -204,8 +224,10 @@ class ImageProcessor:
             IJ.run("Analyze Particles...", "size=3-Infinity pixel display clear")
             results = Results()
             headings, measurements = results.getResultsArray()
-            print(headings, measurements)
+            headers = headers or headings
+            collection[str(i+1)] = measurements
             results.close()
+        return (headers, collection)
 
 
     '''
