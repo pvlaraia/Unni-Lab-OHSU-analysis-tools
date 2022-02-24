@@ -1,13 +1,8 @@
 {
+  "colocalisation": {},
   "core": {
-    "channels": {
-      "1": "Syn1",
-      "2": "gH2AX",
-      "3": "DAPI"
-    },
-    "maskChannel": "3"
+    "maskChannel": "3",
+    "channels": { "1": "Syn1", "2": "gH2AX", "3": "DAPI" }
   },
-  "colocalisation": {
-    "channel": "1"
-  }
+  "foci": { "channels": ["1", "2"] }
 }

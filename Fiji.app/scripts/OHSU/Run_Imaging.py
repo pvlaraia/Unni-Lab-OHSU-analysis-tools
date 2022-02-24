@@ -6,6 +6,7 @@ import os
 from ohsu.config.colocalisation_config import ColocalisationConfig
 from ohsu.config.config import Config
 from ohsu.config.core_config import CoreConfig
+from ohsu.config.foci_config import FociConfig
 from ohsu.file_manager.directory import IJDirectory
 from ohsu.image.image import Image
 from ohsu.results.results import Results
@@ -140,6 +141,12 @@ class ImageProcessor:
             self.colocalisation[HEADER_KEY] = headings
             self.colocalisation[imgName] = coloc_measurements
 
+        # Foci
+        foci_channels = FociConfig.getChannels() or []
+        if foci_channels:
+            for foci_channel in foci_channels:
+                self.getFociForImg(images[foci_channel])
+
         # close everything
         self.disposeRoiManager()
         for img in images.values():
@@ -186,6 +193,19 @@ class ImageProcessor:
             collection.append(data)
 
         return (headers, collection)
+
+    def getFociForImg(self, img):
+        img.select()
+        IJ.setThreshold(img.getThreshold(img.img.getTitle()), 65535)
+        roiM = self.getRoiManager()
+        for i in range(0, roiM.getCount()):
+            img.select()
+            roiM.select(i)
+            IJ.run("Analyze Particles...", "size=3-Infinity pixel display clear")
+            results = Results()
+            headings, measurements = results.getResultsArray()
+            print(headings, measurements)
+            results.close()
 
 
     '''
