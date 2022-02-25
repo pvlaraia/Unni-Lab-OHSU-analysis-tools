@@ -7,6 +7,6 @@ class OHSUPanel(Panel):
         super(Panel, self).__init__()
         
     def repaintDialog(self):
-        self.gd.validate()
         self.gd.pack()
-        self.gd.repaint()
+        self.validate()
+        self.repaint()

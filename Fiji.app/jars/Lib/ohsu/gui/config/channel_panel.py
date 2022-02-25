@@ -1,14 +1,17 @@
 from java.awt.event import ActionListener, KeyListener
-from java.awt import Button, GridBagConstraints, GridBagLayout, GridLayout, Label, Panel, TextField
+from java.awt import Button, Choice, GridBagConstraints, GridBagLayout, GridLayout, Label, Panel, TextField
 from ohsu.config.core_config import CoreConfig
 from ohsu.gui.ohsu_panel import OHSUPanel
-from ij import IJ
 
 class ChannelPanel(OHSUPanel):
 
     def __init__(self, gd):
         OHSUPanel.__init__(self, gd)
+        self.channels = None
         self.listeners = []
+        self.maskChoice = None
+        self.maskPanel = None
+
         self.setLayout(GridBagLayout())
         c = GridBagConstraints()
         self.channels = Panel()
@@ -23,14 +26,14 @@ class ChannelPanel(OHSUPanel):
         addButton.addActionListener(AddChannelHandler(self))
         self.add(addButton, c)
 
-        self.maskTextField = TextField(CoreConfig.getMaskChannel(), 35)
-        maskPanel = Panel()
-        maskPanel.add(Label('Mask Channel'))
-        maskPanel.add(self.maskTextField)
-        self.add(maskPanel, c)
+        self.maskPanel = Panel()
+        self.maskPanel.add(Label('Mask Channel'))
+        self.add(self.maskPanel, c)
+        self.resetMaskOptions()
+        self.addListener(ChannelChangeHandler(self))
 
     def getMaskChannel(self):
-        return self.maskTextField.getText()
+        return self.maskChoice.getSelectedItem() if self.maskChoice is not None else None
 
     def getChannels(self):
         components = self.channels.getComponents()
@@ -54,6 +57,35 @@ class ChannelPanel(OHSUPanel):
         self.channels.add(panelRow)
         self.runListeners()
         self.repaintDialog()
+
+    def resetMaskOptions(self):
+        hasChanges = False
+        existingChoices = [self.maskChoice.getItem(i) for i in range(0, self.maskChoice.getItemCount())] if self.maskChoice is not None else []
+        hasChanges = not existingChoices == self.getChannels().keys()
+        if self.maskChoice is not None and not hasChanges:
+            return False
+
+        preselectedChannel = None
+        if self.maskChoice is not None:
+            preselectedChannel = self.maskChoice.getSelectedItem()
+            self.maskPanel.remove(self.maskChoice)
+        else:
+            preselectedChannel = CoreConfig.getMaskChannel()
+        
+        self.maskChoice = self.generateMaskOptions()
+        channels = self.getChannels().keys()
+        if preselectedChannel is None or preselectedChannel not in channels:
+            preselectedChannel = next(iter(channels), None)
+
+        if preselectedChannel is not None:
+            self.maskChoice.select(preselectedChannel)
+        self.maskPanel.add(self.maskChoice)
+        return True
+
+    def generateMaskOptions(self):
+        choice = Choice()
+        [choice.add(channel) for channel in self.getChannels().keys()]
+        return choice
 
     def removeChannel(self, channelNumber):
         self.channels.remove(self.getComponentForChannel(channelNumber))
@@ -123,3 +155,13 @@ class ChannelListener():
 
     def onChannelsChanged(self, channels):
         pass
+
+class ChannelChangeHandler(ChannelListener):
+    
+    def __init__(self, channelPanel):
+        self.channelPanel = channelPanel
+
+    def onChannelsChanged(self, channels):
+        hadChanges = self.channelPanel.resetMaskOptions()
+        if hadChanges:
+            self.channelPanel.repaintDialog()
