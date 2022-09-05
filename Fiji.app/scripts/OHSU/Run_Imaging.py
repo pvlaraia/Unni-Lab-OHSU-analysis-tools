@@ -8,11 +8,11 @@ from ohsu.config.config import Config
 from ohsu.config.core_config import CoreConfig
 from ohsu.config.foci_config import FociConfig
 from ohsu.file_manager.directory import IJDirectory
+from ohsu.helpers.roi_manager import RoiManager
 from ohsu.image.image import Image
 from ohsu.results.results import Results
 from ij import IJ, WindowManager
 from ij.gui import GenericDialog
-from ij.plugin.frame import RoiManager
 
 HEADER_KEY = '__HEADER__'
 
@@ -46,7 +46,6 @@ class ImageProcessor:
     def __init__(self, inputDir, outputDir):
         self.inputDir = inputDir
         self.outputDir = outputDir
-        self.roiManager = None
         self.roiMeasurements = {}
         channels = CoreConfig.getChannels()
         for channel in channels.keys():
@@ -125,17 +124,15 @@ class ImageProcessor:
         imgName = os.path.splitext(filename)[0]
 
         channels = CoreConfig.getChannels()
-        threshold = img.getThreshold(channels[CoreConfig.getMaskChannel()])
+        core_mask_channel = CoreConfig.getMaskChannel()
+        main_threshold = img.getThreshold(channels[core_mask_channel])
         # routine to select and create single images of the channels and then close the parent z-stack
         images = {}
         for channel, label in channels.items():
             images[channel] = img.createStackedImage(label, int(channel))
-        img.close()
 
         # routine to create ROIs for each nucleus using a set threshold, saves a nuclear mask image and then closes it, saves nuclei properties and the nuclear ROIs
-        # save TIFF
-        self.analyzeParticlesAndCreateROIs(images[CoreConfig.getMaskChannel()], imgName, threshold)
-        
+        self.analyzeParticlesAndCreateROIs(images[core_mask_channel], imgName, main_threshold)
         for channel, channel_img in images.items():
             headings, measurements = self.getRoiMeasurements(channel_img)
             self.roiMeasurements[channel][HEADER_KEY] = headings
@@ -158,9 +155,10 @@ class ImageProcessor:
                     self.fociMeasurements[foci_channel][imgName + '_ROI_' + roiIndex] = measurement
 
         # close everything
-        self.disposeRoiManager()
-        for img in images.values():
-            img.close()
+        RoiManager().dispose()
+        for i in images.values():
+            i.close()
+        img.close()
         Results().close()
 
 
@@ -168,14 +166,14 @@ class ImageProcessor:
         img.select()
         IJ.setThreshold(threshold, 65535)
 
-        self.getRoiManager().runCommand('Show All with labels')
+        RoiManager().get().runCommand('Show All with labels')
         IJ.run("Analyze Particles...", "size=500-Infinity show=Outlines add slice")
         drawing = IJ.getImage()
         tif_name = 'Drawing of {}.tif'.format(imgName)
         IJ.saveAsTiff(drawing, '{}/{}'.format(self.outputDir.path, tif_name))
         drawing.close()
 
-        self.getRoiManager().runCommand('Save', '{}/{}_RoiSet.zip'.format(self.outputDir.path, imgName))
+        RoiManager().get().runCommand('Save', '{}/{}_RoiSet.zip'.format(self.outputDir.path, imgName))
 
 
     '''
@@ -186,7 +184,7 @@ class ImageProcessor:
     return tuple([headers], [[roi measurements]])
     '''
     def getColocalisationForImg(self, img):
-        roiM = self.getRoiManager()
+        roiM = RoiManager().get()
         headers = None
         collection = []
         channels = CoreConfig.getChannels()
@@ -217,7 +215,7 @@ class ImageProcessor:
         collection = {}
         img.select()
         IJ.setThreshold(img.getThreshold(img.img.getTitle()), 65535)
-        roiM = self.getRoiManager()
+        roiM = RoiManager().get()
         for i in range(0, roiM.getCount()):
             img.select()
             roiM.select(i)
@@ -231,28 +229,6 @@ class ImageProcessor:
 
 
     '''
-    Get a reference to our roiManager, create if non exists
-
-    return RoiManager
-    '''
-    def getRoiManager(self):
-        if self.roiManager is None:
-            self.roiManager = RoiManager()
-        return self.roiManager
-    
-    '''
-    Get rid of our RoiManager
-
-    return void
-    '''
-    def disposeRoiManager(self):
-        if (self.roiManager is not None):
-            self.roiManager.reset()
-            self.roiManager.close()
-            self.roiManager = None
-
-
-    '''
     Given an image, get ROI measurements
 
     @img Image - the image to run Coloc on
@@ -260,7 +236,7 @@ class ImageProcessor:
     return tuple([headers], [[roi measurements]])
     '''
     def getRoiMeasurements(self, img):
-        roiM = self.getRoiManager()
+        roiM = RoiManager().get()
         roiM.deselect()
         img.select()
         roiM.runCommand('Measure')
