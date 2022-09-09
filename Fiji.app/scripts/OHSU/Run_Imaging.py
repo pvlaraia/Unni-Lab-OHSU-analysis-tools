@@ -3,6 +3,7 @@ import csv
 import os
 
 
+from ohsu.analysis.nucleolus import Nucleolus
 from ohsu.config.colocalisation_config import ColocalisationConfig
 from ohsu.config.config import Config
 from ohsu.config.core_config import CoreConfig
@@ -160,6 +161,7 @@ class ImageProcessor:
             i.close()
         img.close()
         Results().close()
+        # Nucleolus(images.values()[3], images.values()[1], True).run()
 
 
     def analyzeParticlesAndCreateROIs(self, img, imgName, threshold):
