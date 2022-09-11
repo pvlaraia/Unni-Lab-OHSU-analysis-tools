@@ -1,6 +1,9 @@
 import os
+
 from ij import IJ, WindowManager
 from ij.gui import NonBlockingGenericDialog
+from ohsu.helpers.roi_manager import RoiManager
+from ohsu.results.results import Results
 
 class Image:
     '''
@@ -82,4 +85,20 @@ class Image:
         self.img.setSlice(initialSlice)
         self.img.setC(initialChannel)
         return copy
+
+    '''
+    For this image, get ROI measurements
+
+    return tuple([headers], [[roi measurements]])
+    '''
+    def getRoiMeasurements(self):
+        roiM = RoiManager().get()
+        roiM.deselect()
+        self.select()
+        roiM.runCommand('Measure')
+        results = Results()
+        data = results.getResultsArray()
+        results.close()
+        return data
+
 

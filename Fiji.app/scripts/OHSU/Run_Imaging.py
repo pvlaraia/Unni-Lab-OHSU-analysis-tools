@@ -2,7 +2,7 @@ import codecs
 import csv
 import os
 
-
+from ohsu.analysis.measurements import Measurements
 from ohsu.analysis.nucleolus import Nucleolus
 from ohsu.config.colocalisation_config import ColocalisationConfig
 from ohsu.config.config import Config
@@ -47,11 +47,7 @@ class ImageProcessor:
     def __init__(self, inputDir, outputDir):
         self.inputDir = inputDir
         self.outputDir = outputDir
-        self.roiMeasurements = {}
-        channels = CoreConfig.getChannels()
-        for channel in channels.keys():
-            self.roiMeasurements[channel] = {}
-
+        self.roiMeasurements = None
         self.fociMeasurements = {}
         for channel in (FociConfig.getChannels() or []):
             self.fociMeasurements[channel] = {}
@@ -125,19 +121,13 @@ class ImageProcessor:
         imgName = os.path.splitext(filename)[0]
 
         channels = CoreConfig.getChannels()
-        core_mask_channel = CoreConfig.getMaskChannel()
-        main_threshold = img.getThreshold(channels[core_mask_channel])
         # routine to select and create single images of the channels and then close the parent z-stack
         images = {}
         for channel, label in channels.items():
             images[channel] = img.createStackedImage(label, int(channel))
 
-        # routine to create ROIs for each nucleus using a set threshold, saves a nuclear mask image and then closes it, saves nuclei properties and the nuclear ROIs
-        self.analyzeParticlesAndCreateROIs(images[core_mask_channel], imgName, main_threshold)
-        for channel, channel_img in images.items():
-            headings, measurements = self.getRoiMeasurements(channel_img)
-            self.roiMeasurements[channel][HEADER_KEY] = headings
-            self.roiMeasurements[channel][imgName] = measurements
+        # Cell Measurements
+        self.roiMeasurements = Measurements(img, images, imgName, self.outputDir).run()
 
         # Colocalisation
         coloc_channel = ColocalisationConfig.getChannel()
@@ -228,23 +218,5 @@ class ImageProcessor:
             collection[str(i+1)] = measurements
             results.close()
         return (headers, collection)
-
-
-    '''
-    Given an image, get ROI measurements
-
-    @img Image - the image to run Coloc on
-
-    return tuple([headers], [[roi measurements]])
-    '''
-    def getRoiMeasurements(self, img):
-        roiM = RoiManager().get()
-        roiM.deselect()
-        img.select()
-        roiM.runCommand('Measure')
-        results = Results()
-        data = results.getResultsArray()
-        results.close()
-        return data
 
 run()
