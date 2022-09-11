@@ -3,6 +3,7 @@ import csv
 import os
 
 from ohsu.analysis.colocalisation import Colocalisation
+from ohsu.analysis.foci import Foci
 from ohsu.analysis.measurements import Measurements
 from ohsu.analysis.nucleolus import Nucleolus
 from ohsu.config.colocalisation_config import ColocalisationConfig
@@ -118,12 +119,10 @@ class ImageProcessor:
     '''
     def processImage(self, imgpath):
         img = Image.fromCZI(imgpath)
-        imgName = img.getName()
 
         # Cell Measurements
         self.roiMeasurements = Measurements(img, self.outputDir).run()
         
-        slices = img.getSlices()
         # Colocalisation
         coloc_channel = ColocalisationConfig.getChannel()
         if (coloc_channel is not None and CoreConfig.getChannels().has_key(coloc_channel)):
@@ -132,12 +131,8 @@ class ImageProcessor:
         # Foci
         foci_channels = FociConfig.getChannels() or []
         if foci_channels:
-            for foci_channel in foci_channels:
-                headings, measurements = self.getFociForImg(slices[foci_channel])
-                self.fociMeasurements[foci_channel][HEADER_KEY] = headings
-                for roiIndex, measurement in measurements.items():
-                    self.fociMeasurements[foci_channel][imgName + '_ROI_' + roiIndex] = measurement
-
+            self.fociMeasurements = Foci(img, foci_channels).run()
+            
         # close everything
         RoiManager().dispose()
         img.closeSlices()
