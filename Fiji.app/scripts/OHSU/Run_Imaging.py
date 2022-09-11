@@ -120,19 +120,14 @@ class ImageProcessor:
         filename = os.path.basename(imgpath)
         imgName = os.path.splitext(filename)[0]
 
-        channels = CoreConfig.getChannels()
-        # routine to select and create single images of the channels and then close the parent z-stack
-        images = {}
-        for channel, label in channels.items():
-            images[channel] = img.createStackedImage(label, int(channel))
-
         # Cell Measurements
-        self.roiMeasurements = Measurements(img, images, imgName, self.outputDir).run()
+        self.roiMeasurements = Measurements(img, imgName, self.outputDir).run()
 
+        slices = img.getSlices()
         # Colocalisation
         coloc_channel = ColocalisationConfig.getChannel()
         if (coloc_channel is not None and CoreConfig.getChannels().has_key(coloc_channel)):
-            headings, coloc_measurements = self.getColocalisationForImg(images[coloc_channel])
+            headings, coloc_measurements = self.getColocalisationForImg(slices[coloc_channel])
             self.colocalisation[HEADER_KEY] = headings
             self.colocalisation[imgName] = coloc_measurements
 
@@ -140,15 +135,14 @@ class ImageProcessor:
         foci_channels = FociConfig.getChannels() or []
         if foci_channels:
             for foci_channel in foci_channels:
-                headings, measurements = self.getFociForImg(images[foci_channel])
+                headings, measurements = self.getFociForImg(slices[foci_channel])
                 self.fociMeasurements[foci_channel][HEADER_KEY] = headings
                 for roiIndex, measurement in measurements.items():
                     self.fociMeasurements[foci_channel][imgName + '_ROI_' + roiIndex] = measurement
 
         # close everything
         RoiManager().dispose()
-        for i in images.values():
-            i.close()
+        img.closeSlices()
         img.close()
         Results().close()
         # Nucleolus(images.values()[3], images.values()[1], True).run()

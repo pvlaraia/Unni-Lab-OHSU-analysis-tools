@@ -2,6 +2,7 @@ import os
 
 from ij import IJ, WindowManager
 from ij.gui import NonBlockingGenericDialog
+from ohsu.config.core_config import CoreConfig
 from ohsu.helpers.roi_manager import RoiManager
 from ohsu.results.results import Results
 
@@ -11,6 +12,7 @@ class Image:
     '''
     def __init__(self, img):
          self.img = img
+         self.slices = None
 
     '''
     Open a CZI image with default Bio-Formats settings
@@ -61,6 +63,52 @@ class Image:
         threshold_window.close()
         return dapi_threshold
 
+    '''
+    For this image, get ROI measurements
+
+    return tuple([headers], [[roi measurements]])
+    '''
+    def getRoiMeasurements(self):
+        roiM = RoiManager().get()
+        roiM.deselect()
+        self.select()
+        roiM.runCommand('Measure')
+        results = Results()
+        data = results.getResultsArray()
+        results.close()
+        return data
+
+    '''
+    return slices for this image based on the channels in the provided channel configuration
+
+    return array of image slices
+    '''
+    def getSlices(self):
+        if self.slices is None:
+            self.makeSlices()
+        print(self.slices)
+        return self.slices
+    
+    '''
+    Close all our channel img slices
+
+    return void
+    '''
+    def closeSlices(self):
+        for s in self.slices.values():
+            s.close()
+        self.slices = None
+
+    '''
+    Generate slices for the channels in our program configuration
+
+    return void
+    '''
+    def makeSlices(self):
+        channels = CoreConfig.getChannels()
+        self.slices = {}
+        for channel, label in channels.items():
+            self.slices[channel] = self.createStackedImage(label, int(channel))
 
     '''
     Create a new image from a specific channel of the image in this class
@@ -85,20 +133,3 @@ class Image:
         self.img.setSlice(initialSlice)
         self.img.setC(initialChannel)
         return copy
-
-    '''
-    For this image, get ROI measurements
-
-    return tuple([headers], [[roi measurements]])
-    '''
-    def getRoiMeasurements(self):
-        roiM = RoiManager().get()
-        roiM.deselect()
-        self.select()
-        roiM.runCommand('Measure')
-        results = Results()
-        data = results.getResultsArray()
-        results.close()
-        return data
-
-

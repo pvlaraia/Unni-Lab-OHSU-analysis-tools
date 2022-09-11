@@ -2,12 +2,10 @@ from ij import IJ
 from ohsu.config.core_config import CoreConfig
 from ohsu.constants import HEADER_KEY
 from ohsu.helpers.roi_manager import RoiManager
-from ohsu.results.results import Results
 
 class Measurements:
-    def __init__(self, img, slices, imgName, outputDir):
+    def __init__(self, img, imgName, outputDir):
         self.img = img
-        self.slices = slices
         self.imgName = imgName
         self.outputDir = outputDir
         self.roiMeasurements = {}
@@ -16,20 +14,13 @@ class Measurements:
             self.roiMeasurements[channel] = {}
 
     def run(self):
-        '''
-        channels = CoreConfig.getChannels()
-        core_mask_channel = CoreConfig.getMaskChannel()
-        # routine to select and create single images of the channels and then close the parent z-stack
-        images = {}
-        for channel, label in channels.items():
-            images[channel] = self.img.createStackedImage(label, int(channel))
-            '''
+        slices = self.img.getSlices()
         channels = CoreConfig.getChannels()
         core_mask_channel = CoreConfig.getMaskChannel()
         main_threshold = self.img.getThreshold(channels[core_mask_channel])
         # routine to create ROIs for each nucleus using a set threshold, saves a nuclear mask image and then closes it, saves nuclei properties and the nuclear ROIs
-        self.analyzeParticlesAndCreateROIs(self.slices[core_mask_channel], self.imgName, main_threshold)
-        for channel, channel_img in self.slices.items():
+        self.analyzeParticlesAndCreateROIs(slices[core_mask_channel], self.imgName, main_threshold)
+        for channel, channel_img in slices.items():
             headings, measurements = channel_img.getRoiMeasurements()
             self.roiMeasurements[channel][HEADER_KEY] = headings
             self.roiMeasurements[channel][self.imgName] = measurements
