@@ -10,9 +10,11 @@ class Image:
     '''
     ImagePlus img - the image for which we're retrieving DAPI threshold
     '''
-    def __init__(self, img):
-         self.img = img
-         self.slices = None
+    def __init__(self, img, imgpath = None, name = None):
+        self.imgPath = imgpath
+        self.name = os.path.splitext(os.path.basename(imgpath))[0] if name is None else name
+        self.img = img
+        self.slices = None
 
     '''
     Open a CZI image with default Bio-Formats settings
@@ -26,7 +28,16 @@ class Image:
         filename = os.path.basename(imgpath)
         IJ.run("Bio-Formats", "open=["+imgpath+"] autoscale color_mode=Default rois_import=[ROI manager] view=Hyperstack stack_order=XYCZT")
         img = WindowManager.getImage(filename)
-        return cls(img)
+        return cls(img, imgpath=imgpath)
+    
+
+    '''
+    Name of the image
+
+    return string - name of the image
+    '''
+    def getName(self):
+        return self.name
 
     '''
     Close this image
@@ -86,7 +97,6 @@ class Image:
     def getSlices(self):
         if self.slices is None:
             self.makeSlices()
-        print(self.slices)
         return self.slices
     
     '''
@@ -120,7 +130,7 @@ class Image:
     '''
     def createStackedImage(self, name, channel):
         IJ.newImage(name, '16-bit black', 1908, 1908, 1)
-        copy = Image(WindowManager.getImage(name))
+        copy = Image(WindowManager.getImage(name), name=name)
         self.select()
         initialSlice = self.img.getSlice()
         initialChannel = self.img.getC()

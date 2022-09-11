@@ -2,6 +2,7 @@ import codecs
 import csv
 import os
 
+from ohsu.analysis.colocalisation import Colocalisation
 from ohsu.analysis.measurements import Measurements
 from ohsu.analysis.nucleolus import Nucleolus
 from ohsu.config.colocalisation_config import ColocalisationConfig
@@ -117,20 +118,17 @@ class ImageProcessor:
     '''
     def processImage(self, imgpath):
         img = Image.fromCZI(imgpath)
-        filename = os.path.basename(imgpath)
-        imgName = os.path.splitext(filename)[0]
+        imgName = img.getName()
 
         # Cell Measurements
-        self.roiMeasurements = Measurements(img, imgName, self.outputDir).run()
-
+        self.roiMeasurements = Measurements(img, self.outputDir).run()
+        
         slices = img.getSlices()
         # Colocalisation
         coloc_channel = ColocalisationConfig.getChannel()
         if (coloc_channel is not None and CoreConfig.getChannels().has_key(coloc_channel)):
-            headings, coloc_measurements = self.getColocalisationForImg(slices[coloc_channel])
-            self.colocalisation[HEADER_KEY] = headings
-            self.colocalisation[imgName] = coloc_measurements
-
+            self.colocalisation = Colocalisation(img, coloc_channel).run()
+            
         # Foci
         foci_channels = FociConfig.getChannels() or []
         if foci_channels:
