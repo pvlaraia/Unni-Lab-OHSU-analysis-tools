@@ -120,25 +120,23 @@ class ImageProcessor:
     def processImage(self, imgpath):
         img = Image.fromCZI(imgpath)
 
-        # Cell Measurements
         self.roiMeasurements = Measurements(img, self.outputDir).run()
         
-        # Colocalisation
         coloc_channel = ColocalisationConfig.getChannel()
         if (coloc_channel is not None and CoreConfig.getChannels().has_key(coloc_channel)):
             self.colocalisation = Colocalisation(img, coloc_channel).run()
             
-        # Foci
         foci_channels = FociConfig.getChannels() or []
         if foci_channels:
             self.fociMeasurements = Foci(img, foci_channels).run()
             
+        # Nucleolus(images.values()[3], images.values()[1], True).run()
+
         # close everything
         RoiManager().dispose()
         img.closeSlices()
         img.close()
         Results().close()
-        # Nucleolus(images.values()[3], images.values()[1], True).run()
 
 
     def analyzeParticlesAndCreateROIs(self, img, imgName, threshold):
