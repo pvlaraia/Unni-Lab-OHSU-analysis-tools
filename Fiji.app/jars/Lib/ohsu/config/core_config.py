@@ -15,6 +15,17 @@ class CoreConfig:
         Config.set('core', config)
 
     @staticmethod
+    def getShouldRunCellMeasurements():
+        config = CoreConfig.get()
+        return config['shouldRunMeasurements'] if config is not None and config.has_key('shouldRunMeasurements') else False
+
+    @staticmethod
+    def setShouldRunCellMeasurements(flag):
+        config = CoreConfig.get()
+        config['shouldRunMeasurements'] = flag
+        Config.set('core', config)
+
+    @staticmethod
     def getChannels():
         config = CoreConfig.get()
         return config['channels'] if config is not None and config.has_key('channels') else None

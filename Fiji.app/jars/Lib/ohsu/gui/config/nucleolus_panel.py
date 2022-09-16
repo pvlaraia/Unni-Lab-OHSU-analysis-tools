@@ -1,8 +1,7 @@
 from java.awt.event import ItemListener
-from java.awt import  Checkbox, Choice, GridBagConstraints, GridBagLayout, GridLayout, Panel
+from java.awt import  Checkbox, Choice, GridBagConstraints, GridBagLayout, GridLayout, Label, Panel
 from ohsu.config.nucleolus_config import NucleolusConfig
 from ohsu.gui.ohsu_panel import OHSUPanel
-from ohsu.gui.checkbox import OHSUCheckbox
 from ohsu.gui.config.channel_panel import ChannelListener
 
 class NucleolusPanel(OHSUPanel):
@@ -33,6 +32,7 @@ class NucleolusPanel(OHSUPanel):
     def getOptions(self):
         targetPanel = Panel()
         targetPanel.setLayout(GridLayout(0, 1))
+        targetPanel.add(Label('Target channel'))
         choice = Choice()
         [choice.add(channel) for channel in self.channelPanel.getChannels().keys()]
         if (self.selectedTargetChannel in self.channelPanel.getChannels().keys()):
