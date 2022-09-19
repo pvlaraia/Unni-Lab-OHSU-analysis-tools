@@ -59,7 +59,8 @@ class Image:
 
     return int - the threshold as set by the user
     '''
-    def getThreshold(self, label):
+    def getThreshold(self, label = None):
+        label = label or self.getName()
         self.select()
         IJ.run('Threshold...')
         threshold_window = WindowManager.getWindow('Threshold')

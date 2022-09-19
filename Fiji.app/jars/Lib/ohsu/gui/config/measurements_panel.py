@@ -10,7 +10,7 @@ class MeasurementsPanel(OHSUPanel):
         self.c = GridBagConstraints()
         self.c.anchor = GridBagConstraints.CENTER
         isEnabled = CoreConfig.getShouldRunCellMeasurements() or False
-        self.checkbox = Checkbox('Enable default cell measurements', isEnabled)
+        self.checkbox = Checkbox('Enable cell intensity measurements (all channels)', isEnabled)
         checkboxConstraint = GridBagConstraints()
         checkboxConstraint.gridwidth = GridBagConstraints.REMAINDER
         self.add(self.checkbox, checkboxConstraint)

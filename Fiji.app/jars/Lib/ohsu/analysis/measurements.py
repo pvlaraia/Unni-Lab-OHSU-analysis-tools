@@ -14,11 +14,10 @@ class Measurements:
 
     def run(self):
         slices = self.img.getSlices()
-        channels = CoreConfig.getChannels()
-        core_mask_channel = CoreConfig.getMaskChannel()
-        main_threshold = self.img.getThreshold(channels[core_mask_channel])
+        mask_channel_img = slices[CoreConfig.getMaskChannel()]
+        main_threshold = mask_channel_img.getThreshold()
         # routine to create ROIs for each nucleus using a set threshold, saves a nuclear mask image and then closes it, saves nuclei properties and the nuclear ROIs
-        self.analyzeParticlesAndCreateROIs(slices[core_mask_channel], main_threshold)
+        self.analyzeParticlesAndCreateROIs(mask_channel_img, main_threshold)
         for channel, channel_img in slices.items():
             headings, measurements = channel_img.getRoiMeasurements()
             self.roiMeasurements[channel][HEADER_KEY] = headings
