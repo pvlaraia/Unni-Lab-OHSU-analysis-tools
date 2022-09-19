@@ -27,6 +27,8 @@ class NucleolusPanel(OHSUPanel):
         self.regenerateOptions()
 
     def getTargetChannel(self):
+        if not self.checkbox.getState():
+            return None
         return self.selectedTargetChannel
 
     def getOptions(self):
