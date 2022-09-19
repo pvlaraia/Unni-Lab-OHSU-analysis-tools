@@ -1,0 +1,9 @@
+{
+  "colocalisation": {},
+  "core": {
+    "maskChannel": "4",
+    "channels": { "1": "NST", "2": "RNAPII", "3": "EU", "4": "DAPI" }
+  },
+  "nucleolus": { "targetChannel": "2" },
+  "foci": {}
+}
