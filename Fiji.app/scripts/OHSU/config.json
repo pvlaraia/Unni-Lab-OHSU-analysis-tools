@@ -1,10 +1,9 @@
 {
   "colocalisation": {},
   "core": {
-    "shouldRunMeasurements": true,
-    "maskChannel": "3",
-    "channels": { "1": "Syn1", "2": "gH2AX", "3": "DAPI" }
+    "maskChannel": "4",
+    "channels": { "1": "NST", "2": "RNAPII", "3": "EU", "4": "DAPI" }
   },
-  "nucleolus": {},
+  "nucleolus": { "targetChannel": "2" },
   "foci": {}
 }

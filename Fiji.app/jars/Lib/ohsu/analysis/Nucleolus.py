@@ -10,28 +10,35 @@ class Nucleolus:
         slices = img.getSlices()
         nucleolus_target_channel = NucleolusConfig.getTargetChannel()
         main_mask_channel = CoreConfig.getMaskChannel()
-        self.mainChannelImg = slices[main_mask_channel]
-        self.secondaryChannelImg= slices[nucleolus_target_channel]
+        self.cellMaskImg = slices[main_mask_channel]
+        self.nucleolusMaskImg= slices[nucleolus_target_channel]
+        self.nucleolusMeasureImg = slices['2'] # @nocommit
         self.shouldInvertROI= shouldInvertROI
 
     def run(self):
-        self.mainChannelImg.select()
-        IJ.setThreshold(self.mainChannelImg.getThreshold(self.mainChannelImg.img.getTitle()), 65535)
+        self.cellMaskImg.select()
+        IJ.setThreshold(self.cellMaskImg.getThreshold(), 65535)
         roiM = RoiManager().get()
         IJ.run("Analyze Particles...", "size=500-Infinity add")
+        cellRoiCount = roiM.getCount()
         if self.shouldInvertROI:
-            for i in range(0, roiM.getCount()):
-                self.secondaryChannelImg.select()
+            for i in range(0, cellRoiCount):
+                self.nucleolusMaskImg.select()
                 roiM.select(i)
                 IJ.run("Invert")
 
+        for i in range(0, cellRoiCount):
+            self.nucleolusMaskImg.select()
+            roiM.select(i)
+            IJ.setThreshold(self.nucleolusMaskImg.getThreshold(), 65535)
+            IJ.run("Analyze Particles...", "size=300-Infinity exclude add")
+
         headers = None
         collection = {}
-        for i in range(0, roiM.getCount()):
-            self.secondaryChannelImg.select()
+        for i in range(cellRoiCount, roiM.getCount()):
+            self.nucleolusMeasureImg.select()
             roiM.select(i)
-            IJ.setThreshold(self.secondaryChannelImg.getThreshold(self.secondaryChannelImg.img.getTitle()), 65535)
-            IJ.run("Analyze Particles...", "size=300-Infinity display exclude clear")
+            roiM.runCommand('Measure')
             results = Results()
             headings, measurements = results.getResultsArray()
             headers = headers or headings
