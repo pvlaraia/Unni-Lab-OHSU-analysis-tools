@@ -1,4 +1,5 @@
 from ij import IJ
+from time import sleep
 from ohsu.constants import HEADER_KEY
 from ohsu.config.core_config import CoreConfig
 from ohsu.config.nucleolus_config import NucleolusConfig
@@ -12,7 +13,7 @@ class Nucleolus:
         main_mask_channel = CoreConfig.getMaskChannel()
         self.cellMaskImg = slices[main_mask_channel]
         self.nucleolusMaskImg= slices[nucleolus_target_channel]
-        self.nucleolusMeasureImg = slices['2'] # @nocommit
+        self.nucleolusMeasureImg = slices['3'] # @nocommit
         self.shouldInvertROI= shouldInvertROI
 
     def run(self):
@@ -27,22 +28,29 @@ class Nucleolus:
                 roiM.select(i)
                 IJ.run("Invert")
 
+        roiGroups = {}
+        roiCountSoFar = cellRoiCount
         for i in range(0, cellRoiCount):
             self.nucleolusMaskImg.select()
             roiM.select(i)
             IJ.setThreshold(self.nucleolusMaskImg.getThreshold(), 65535)
             IJ.run("Analyze Particles...", "size=300-Infinity exclude add")
+            countAfterAnalyze = roiM.getCount()
+            roiGroups[i] = range(roiCountSoFar, countAfterAnalyze)
+            roiCountSoFar = countAfterAnalyze
 
         headers = None
         collection = {}
-        for i in range(cellRoiCount, roiM.getCount()):
+        for cellI, roiIndices in roiGroups.items():
+            roiM.deselect()
+            roiM.setSelectedIndexes(roiIndices)
             self.nucleolusMeasureImg.select()
-            roiM.select(i)
             roiM.runCommand('Measure')
             results = Results()
             headings, measurements = results.getResultsArray()
             headers = headers or headings
-            collection[str(i+1)] = measurements
+            collection[cellI] = measurements
             results.close()
+
         collection[HEADER_KEY] = headers
         return collection
