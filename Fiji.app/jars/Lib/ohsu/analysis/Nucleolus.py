@@ -1,5 +1,4 @@
 from ij import IJ
-from time import sleep
 from ohsu.constants import HEADER_KEY
 from ohsu.config.core_config import CoreConfig
 from ohsu.config.nucleolus_config import NucleolusConfig
@@ -9,11 +8,9 @@ from ohsu.results.results import Results
 class Nucleolus:
     def __init__(self, img, shouldInvertROI):
         slices = img.getSlices()
-        nucleolus_target_channel = NucleolusConfig.getTargetChannel()
-        main_mask_channel = CoreConfig.getMaskChannel()
-        self.cellMaskImg = slices[main_mask_channel]
-        self.nucleolusMaskImg= slices[nucleolus_target_channel]
-        self.nucleolusMeasureImg = slices['3'] # @nocommit
+        self.cellMaskImg = slices[CoreConfig.getMaskChannel()]
+        self.nucleolusMaskImg= slices[NucleolusConfig.getMaskChannel()]
+        self.nucleolusMeasureImg = slices[NucleolusConfig.getNucleolusChannel()]
         self.shouldInvertROI= shouldInvertROI
 
     def run(self):

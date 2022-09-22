@@ -10,14 +10,20 @@ class NucleolusPanel(OHSUPanel):
         OHSUPanel.__init__(self, gd)
         self.channelPanel = channelPanel
         self.channelPanel.addListener(ChannelChangeHandler(self))
-        self.options = None
-        self.targetChoiceDropdown = None
-        self.selectedTargetChannel = NucleolusConfig.getTargetChannel()
+
+        self.maskOptions = None
+        self.maskChoiceDropdown = None
+        self.selectedMaskChannel = NucleolusConfig.getMaskChannel()
+
+        self.nucOptions = None
+        self.nucChoiceDropdown = None
+        self.selectedNucChannel = NucleolusConfig.getNucleolusChannel()
+
         self.setLayout(GridBagLayout())
         self.c = GridBagConstraints()
         self.c.anchor = GridBagConstraints.CENTER
 
-        isEnabled = NucleolusConfig.getTargetChannel() is not None
+        isEnabled = NucleolusConfig.getMaskChannel() is not None
         self.checkbox = Checkbox('Enable nucleolus analysis', isEnabled)
         self.checkbox.addItemListener(self.ToggleHandler(self))
         checkboxConstraint = GridBagConstraints()
@@ -26,35 +32,61 @@ class NucleolusPanel(OHSUPanel):
         
         self.regenerateOptions()
 
-    def getTargetChannel(self):
+    def getMaskChannel(self):
         if not self.checkbox.getState():
             return None
-        return self.selectedTargetChannel
+        return self.selectedMaskChannel
+    
+    def getNucleolusChannel(self):
+        if not self.checkbox.getState():
+            return None
+        return self.selectedNucChannel
 
-    def getOptions(self):
-        targetPanel = Panel()
-        targetPanel.setLayout(GridLayout(0, 1))
-        targetPanel.add(Label('Target channel'))
+    def getMaskOptions(self):
+        maskPanel = Panel()
+        maskPanel.setLayout(GridLayout(0, 1))
+        maskPanel.add(Label('Inverted mask channel'))
+        choice = self.getChannelChoices(self.selectedMaskChannel)
+        choice.addItemListener(self.MaskChoiceHandler(self))
+        maskPanel.add(choice)
+        self.maskChoiceDropdown = choice
+        return maskPanel
+    
+    def getNucOptions(self):
+        nucPanel = Panel()
+        nucPanel.setLayout(GridLayout(0, 1))
+        nucPanel.add(Label('Nucleolus channel'))
+        choice = self.getChannelChoices(self.selectedNucChannel)
+        choice.addItemListener(self.NucChoiceHandler(self))
+        nucPanel.add(choice)
+        self.nucChoiceDropdown = choice
+        return nucPanel
+
+    def getChannelChoices(self, selectedChannel):
         choice = Choice()
         [choice.add(channel) for channel in self.channelPanel.getChannels().keys()]
-        if (self.selectedTargetChannel in self.channelPanel.getChannels().keys()):
-            choice.select(self.selectedTargetChannel)
-        choice.addItemListener(self.TargetChoiceHandler(self))
-        targetPanel.add(choice)
-        self.targetChoiceDropdown = choice
-        return targetPanel
+        if (selectedChannel in self.channelPanel.getChannels().keys()):
+            choice.select(selectedChannel)
+        return choice
+
 
     def regenerateOptions(self):
         self.removeOptions()
         if self.checkbox.getState():
-            self.options = self.getOptions()
-            self.add(self.options, self.c)
+            self.maskOptions = self.getMaskOptions()
+            self.add(self.maskOptions, self.c)
+            self.nucOptions = self.getNucOptions()
+            self.add(self.nucOptions, self.c)
         self.repaintDialog()
 
     def removeOptions(self):
-        if (self.options is not None):
-            self.targetChoiceDropdown = None
-            self.remove(self.options)
+        if (self.maskOptions is not None):
+            self.maskChoiceDropdown = None
+            self.remove(self.maskOptions)
+
+        if self.nucOptions is not None:
+            self.nucChoiceDropdown = None
+            self.remove(self.nucOptions)
 
     class ToggleHandler(ItemListener):
         
@@ -65,13 +97,22 @@ class NucleolusPanel(OHSUPanel):
         def itemStateChanged(self, event):
             self.nucleolusPanel.regenerateOptions()
 
-    class TargetChoiceHandler(ItemListener):
+    class MaskChoiceHandler(ItemListener):
         def __init__(self, nucleolusPanel):
             super(ItemListener, self).__init__()
             self.nucleolusPanel = nucleolusPanel
 
         def itemStateChanged(self, event):
-            self.nucleolusPanel.selectedTargetChannel = self.nucleolusPanel.targetChoiceDropdown.getSelectedItem()
+            self.nucleolusPanel.selectedMaskChannel = self.nucleolusPanel.maskChoiceDropdown.getSelectedItem()
+
+    class NucChoiceHandler(ItemListener):
+        def __init__(self, nucleolusPanel):
+            super(ItemListener, self).__init__()
+            self.nucleolusPanel = nucleolusPanel
+
+        def itemStateChanged(self, event):
+            self.nucleolusPanel.selectedNucChannel = self.nucleolusPanel.nucChoiceDropdown.getSelectedItem()
+
 
 class ChannelChangeHandler(ChannelListener):
     

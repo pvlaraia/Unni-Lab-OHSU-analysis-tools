@@ -136,8 +136,8 @@ class ImageProcessor:
         if foci_channels:
             self.fociMeasurements = Foci(img, foci_channels).run()
             
-        nucleolus_target_channel = NucleolusConfig.getTargetChannel()
-        if nucleolus_target_channel is not None:
+        nucleolus_mask_channel = NucleolusConfig.getMaskChannel()
+        if nucleolus_mask_channel is not None:
             self.nucleolusMeasurements = Nucleolus(img, True).run()
 
         # close everything

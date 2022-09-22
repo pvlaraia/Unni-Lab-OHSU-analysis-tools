@@ -35,7 +35,8 @@ def run():
     CoreConfig.setShouldRunCellMeasurements(measurementsPanel.getRunCellMeasurementsFlag())
     ColocalisationConfig.setChannel(colocPanel.getChannel())
     FociConfig.setChannels(fociPanel.getChannels())
-    NucleolusConfig.setTargetChannel(nucleolusPanel.getTargetChannel())
+    NucleolusConfig.setMaskChannel(nucleolusPanel.getMaskChannel())
+    NucleolusConfig.setNucleolusChannel(nucleolusPanel.getNucleolusChannel())
     
     Config.save()
 
