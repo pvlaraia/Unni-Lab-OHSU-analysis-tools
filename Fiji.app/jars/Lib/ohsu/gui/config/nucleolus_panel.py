@@ -11,11 +11,11 @@ class NucleolusPanel(OHSUPanel):
         self.channelPanel = channelPanel
         self.channelPanel.addListener(ChannelChangeHandler(self))
 
-        self.maskOptions = None
+        self.optionsPanel = None
+
         self.maskChoiceDropdown = None
         self.selectedMaskChannel = NucleolusConfig.getMaskChannel()
 
-        self.nucOptions = None
         self.nucChoiceDropdown = None
         self.selectedNucChannel = NucleolusConfig.getNucleolusChannel()
 
@@ -73,20 +73,19 @@ class NucleolusPanel(OHSUPanel):
     def regenerateOptions(self):
         self.removeOptions()
         if self.checkbox.getState():
-            self.maskOptions = self.getMaskOptions()
-            self.add(self.maskOptions, self.c)
-            self.nucOptions = self.getNucOptions()
-            self.add(self.nucOptions, self.c)
+            maskOptions = self.getMaskOptions()
+            nucOptions = self.getNucOptions()
+            self.optionsPanel = Panel()
+            self.optionsPanel.setLayout(GridLayout(0, 1))
+            self.optionsPanel.add(maskOptions)
+            self.optionsPanel.add(nucOptions)
+            self.add(self.optionsPanel)
         self.repaintDialog()
 
     def removeOptions(self):
-        if (self.maskOptions is not None):
-            self.maskChoiceDropdown = None
-            self.remove(self.maskOptions)
-
-        if self.nucOptions is not None:
-            self.nucChoiceDropdown = None
-            self.remove(self.nucOptions)
+        if self.optionsPanel is not None:
+            self.remove(self.optionsPanel)
+            self.optionsPanel = None
 
     class ToggleHandler(ItemListener):
         
