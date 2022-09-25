@@ -5,6 +5,7 @@ from ij.gui import NonBlockingGenericDialog
 from ohsu.config.core_config import CoreConfig
 from ohsu.helpers.roi_manager import RoiManager
 from ohsu.results.results import Results
+from ohsu.state.threshold_state import ThresholdState
 
 class Image:
     '''
@@ -67,13 +68,14 @@ class Image:
 
         gd = NonBlockingGenericDialog('Get {} Threshold'.format(label))
         gd.addMessage('Tweak the threshold slider until it looks right, then enter that number below as the {} Threshold to use for this image'.format(label))
-        gd.addNumericField('{} Threshold'.format(label), 0)
+        gd.addNumericField('{} Threshold'.format(label), ThresholdState().get(self) or 0)
         gd.hideCancelButton()
         gd.showDialog()
-        dapi_threshold = int(gd.getNumericFields()[0].getText())
+        threshold = int(gd.getNumericFields()[0].getText())
 
         threshold_window.close()
-        return dapi_threshold
+        ThresholdState().set(self, threshold)
+        return threshold
 
     '''
     For this image, get ROI measurements
