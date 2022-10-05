@@ -17,7 +17,6 @@ class Foci:
                 foci_measurements[foci_channel] = {HEADER_KEY: headings}
                 for roiIndex, measurement in measurements.items():
                     foci_measurements[foci_channel][self.img.getName() + '_ROI_' + roiIndex] = measurement
-        RoiManager().dispose()
         return foci_measurements
 
     '''

@@ -11,7 +11,6 @@ class Colocalisation:
 
     def run(self):
         headings, measurements = self.getColocalisation()
-        RoiManager().dispose()
         return {HEADER_KEY: headings, self.img.getName(): measurements}
 
 

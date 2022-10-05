@@ -22,7 +22,6 @@ class Measurements:
             headings, measurements = channel_img.getRoiMeasurements()
             self.roiMeasurements[channel][HEADER_KEY] = headings
             self.roiMeasurements[channel][self.img.getName()] = measurements
-        RoiManager().dispose()
         return self.roiMeasurements
 
     def analyzeParticlesAndCreateROIs(self, slice, threshold):

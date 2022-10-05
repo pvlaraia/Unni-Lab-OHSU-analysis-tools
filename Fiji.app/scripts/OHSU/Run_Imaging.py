@@ -152,6 +152,8 @@ class ImageProcessor:
                 copy.update(measurement)
                 self.fociMeasurements[channel] = copy
 
+        RoiManager().dispose()
+
         nucleolus_mask_channel = NucleolusConfig.getMaskChannel()
         if nucleolus_mask_channel is not None:
             nucleolusMeasurements = Nucleolus(img, True).run()
