@@ -1,3 +1,4 @@
+from time import sleep
 from ij import IJ
 from ohsu.constants import HEADER_KEY
 from ohsu.config.core_config import CoreConfig
@@ -8,6 +9,7 @@ from ohsu.results.results import Results
 class Nucleolus:
     def __init__(self, img, shouldInvertROI):
         slices = img.getSlices()
+        self.img = img
         self.cellMaskImg = slices[CoreConfig.getMaskChannel()]
         self.nucleolusMaskImg= slices[NucleolusConfig.getMaskChannel()]
         self.nucleolusMeasureImg = slices[NucleolusConfig.getNucleolusChannel()]
@@ -48,6 +50,6 @@ class Nucleolus:
             headers = headers or headings
             collection[cellI] = measurements
             results.close()
+        RoiManager().dispose()
 
-        collection[HEADER_KEY] = headers
-        return collection
+        return {HEADER_KEY: headers, self.img.getName(): collection}

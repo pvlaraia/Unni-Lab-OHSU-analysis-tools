@@ -49,12 +49,11 @@ class ImageProcessor:
     def __init__(self, inputDir, outputDir):
         self.inputDir = inputDir
         self.outputDir = outputDir
-        self.roiMeasurements = None
+        self.resultsStore = {}
+        self.roiMeasurements = {} 
         self.fociMeasurements = {}
-        for channel in (FociConfig.getChannels() or []):
-            self.fociMeasurements[channel] = {}
         self.colocalisation = {}
-        self.nucleolusMeasurements = None
+        self.nucleolusMeasurements = {}
 
     '''
     Main entrypoint, run the program. walk all the images in inputDir and process in sequence
@@ -76,7 +75,7 @@ class ImageProcessor:
     ''' 
     def postProcessData(self):
         channels = CoreConfig.getChannels()
-        if self.roiMeasurements is not None:
+        if self.roiMeasurements is not None and len(self.roiMeasurements) > 0:
             for channel, cellData in self.roiMeasurements.items():
                 self.saveCollection(cellData, '{}_cells.csv'.format(channels[channel]))
         
@@ -86,8 +85,9 @@ class ImageProcessor:
         for channel, fociData in self.fociMeasurements.items():
             self.saveCollection(fociData, '{}_foci.csv'.format(channels[channel]))
 
-        if self.nucleolusMeasurements is not None:
+        if self.nucleolusMeasurements is not None and len(self.nucleolusMeasurements) > 0:
             self.saveCollection(self.nucleolusMeasurements, 'nucleolus.csv')
+
 
     '''
     Save a collection to a file
@@ -112,7 +112,12 @@ class ImageProcessor:
                 if (imgName == HEADER_KEY):
                     continue
                 writer.writerow([imgName])
-                writer.writerows(map(lambda measurement_row: [''] + [entry.encode('utf-8') for entry in measurement_row], measurements))
+                if type(measurements) is dict:
+                    for key, measure in measurements.items():
+                        writer.writerow(['', 'cell_{}'.format(key)])
+                        writer.writerows(map(lambda measurement_row: [''] + [entry.encode('utf-8') for entry in measurement_row], measure))
+                else:
+                    writer.writerows(map(lambda measurement_row: [''] + [entry.encode('utf-8') for entry in measurement_row], measurements))
         
 
     '''
@@ -126,19 +131,33 @@ class ImageProcessor:
         img = Image.fromCZI(imgpath)
 
         if CoreConfig.getShouldRunCellMeasurements():
-            self.roiMeasurements = Measurements(img, self.outputDir).run()
+            imgMeasurements = Measurements(img, self.outputDir).run()
+            for channel, measurement in imgMeasurements.items():
+                copy = dict(self.roiMeasurements[channel] if channel in self.roiMeasurements else {})
+                copy.update(measurement)
+                self.roiMeasurements[channel] = copy
         
         coloc_channel = ColocalisationConfig.getChannel()
         if (coloc_channel is not None and CoreConfig.getChannels().has_key(coloc_channel)):
-            self.colocalisation = Colocalisation(img, coloc_channel).run()
+            colocalisation = Colocalisation(img, coloc_channel).run()
+            copy = dict(self.colocalisation)
+            copy.update(colocalisation)
+            self.colocalisation = copy
             
         foci_channels = FociConfig.getChannels() or []
         if foci_channels:
-            self.fociMeasurements = Foci(img, foci_channels).run()
-            
+            fociMeasurements = Foci(img, foci_channels).run()
+            for channel, measurement in fociMeasurements.items():
+                copy = dict(self.fociMeasurements[channel] if channel in self.fociMeasurements else {})
+                copy.update(measurement)
+                self.fociMeasurements[channel] = copy
+
         nucleolus_mask_channel = NucleolusConfig.getMaskChannel()
         if nucleolus_mask_channel is not None:
-            self.nucleolusMeasurements = Nucleolus(img, True).run()
+            nucleolusMeasurements = Nucleolus(img, True).run()
+            copy = dict(self.nucleolusMeasurements)
+            copy.update(nucleolusMeasurements)
+            self.nucleolusMeasurements= copy
 
         # close everything
         RoiManager().dispose()
