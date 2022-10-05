@@ -1,4 +1,3 @@
-from time import sleep
 from ij import IJ
 from ohsu.constants import HEADER_KEY
 from ohsu.config.core_config import CoreConfig
