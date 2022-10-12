@@ -18,7 +18,7 @@ class Nucleolus:
         self.cellMaskImg.select()
         IJ.setThreshold(self.cellMaskImg.getThreshold(), 65535)
         roiM = RoiManager().get()
-        IJ.run("Analyze Particles...", "size=500-Infinity add")
+        IJ.run("Analyze Particles...", "size=1000-Infinity add")
         cellRoiCount = roiM.getCount()
         if self.shouldInvertROI:
             for i in range(0, cellRoiCount):
@@ -32,7 +32,7 @@ class Nucleolus:
             self.nucleolusMaskImg.select()
             roiM.select(i)
             IJ.setThreshold(self.nucleolusMaskImg.getThreshold(), 65535)
-            IJ.run("Analyze Particles...", "size=300-Infinity exclude add")
+            IJ.run("Analyze Particles...", "size=100-Infinity exclude add")
             countAfterAnalyze = roiM.getCount()
             roiGroups[i] = range(roiCountSoFar, countAfterAnalyze)
             roiCountSoFar = countAfterAnalyze
