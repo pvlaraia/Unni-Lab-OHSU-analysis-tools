@@ -30,7 +30,7 @@ class Measurements:
         IJ.setThreshold(threshold, 65535)
 
         RoiManager().get().runCommand('Show All with labels')
-        IJ.run("Analyze Particles...", "size=500-Infinity show=Outlines add slice")
+        IJ.run("Analyze Particles...", "size=1000-Infinity show=Outlines add slice")
         drawing = IJ.getImage()
         tif_name = 'Drawing of {}.tif'.format(imgName)
         IJ.saveAsTiff(drawing, '{}/{}'.format(self.outputDir.path, tif_name))
